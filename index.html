@@ -898,7 +898,9 @@ main{padding:18px 20px;max-width:1200px;margin:0 auto;}
     <button class="ptbtn" onclick="setAILegs(5,this)">5-Leg</button>
     <button class="ptbtn" onclick="setAILegs(6,this)">6-Leg</button>
   </div>
-  <div class="ptypes" style="margin-bottom:16px" id="ai-pick-types"></div>
+  <div style="background:var(--c);border:1px solid var(--b);border-radius:3px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--m2);line-height:1.7">
+    PropOS scans <strong style="color:var(--txt)">all stat categories</strong> simultaneously — Points, Rebounds, Assists, PRA, Blocks, Steals — and selects the best legs based on hit rate, EV vs sportsbook, game script, and confidence. You don't need to pick a category.
+  </div>
   <button class="mbtn bgold" style="max-width:280px;margin-bottom:20px" onclick="genAIPicks()">GENERATE SHARP PICKS</button>
   <div id="ai-picks-out"></div>
 </div>
@@ -2325,49 +2327,82 @@ function setDate(offset,el){
 function updateMnav(){const b=document.getElementById('mnav-badge');if(!b)return;if(parlay.length){b.style.display='flex';b.textContent=parlay.length;}else{b.style.display='none';}}
 async function genAIPicks(){
   const el=document.getElementById('ai-picks-out');const plat=PLATFORMS[aiPlatform];
-  if(myState&&!isLegal(aiPlatform)&&aiPlatform!=='vg'){el.innerHTML=`<div style="background:var(--redd);border:1px solid rgba(224,68,58,.3);border-radius:3px;padding:13px;font-size:12px;color:var(--red)">${plat.name} not available in ${myState}.</div>`;return;}
-  el.innerHTML=`<div class="aibox"><div class="ailbl"><div class="aidt"></div>Running v7 edge engine...</div><div class="ls" style="padding:25px"><div class="spin"></div></div></div>`;
-  // V7: Sort by composite score — conf (40%) + hit rate bonus (40%) + EV edge (20%)
-  const scored=[...allPlayers].map(p=>{
-    const intel=getIntel(p);const st=getPrimStat(p);
-    const hr=getStatHitRate(st);const edge=getEdge(p);
-    const evBonus=edge?.evType==='plus'?10:edge?.evType==='minus'?-10:0;
-    return{p,score:intel.conf*0.4+hr*0.4+evBonus*0.2};
-  }).sort((a,b)=>b.score-a.score).map(x=>x.p);
-  const pool=scored.slice(0,24);
-  const hitRateNote=`NBA stat hit rates: BLK 69.9%, STL 61.9%, REB 58.4%, AST 57.1%, PTS 55.7%, PRA 54.7%. Favor high hit rate stats for safer legs.`;
-  const gameScriptNote=gameScripts&&Object.keys(gameScripts).length?`Game scripts active — ${Object.entries(gameScripts).filter(([,v])=>v.script!=='normal').map(([team,v])=>`${team}: ${v.script}${v.isFav?' (FAV)':' (DOG)'}`).slice(0,4).join(', ')}`:'Game scripts: simulated.';
+  if(myState&&!isLegal(aiPlatform)&&aiPlatform!=='vg'){
+    el.innerHTML=`<div style="background:var(--redd);border:1px solid rgba(224,68,58,.3);border-radius:3px;padding:13px;font-size:12px;color:var(--red)">${plat.name} not available in ${myState}.</div>`;
+    return;
+  }
+  el.innerHTML=`<div class="aibox"><div class="ailbl"><div class="aidt"></div>Scanning all categories for sharpest legs...</div><div class="ls" style="padding:25px"><div class="spin"></div></div></div>`;
+  const allStats=SPORT_PICKS[sport]||SPORT_PICKS.NBA;
+  const allCandidates=[];
+  allPlayers.forEach(p=>{
+    allStats.forEach(statObj=>{
+      const stat=statObj.k;const val=p[stat];
+      if(!val||val<=0)return;
+      const savedPickType=pickType;pickType=stat;
+      const line=suggestLine(p);const ppData=getPPLine(p);
+      const edge=getEdge(p);const intel=getIntel(p);
+      const hitRate=getStatHitRate(stat);const gsAdj=getGameScriptAdj(p);
+      pickType=savedPickType;
+      const evBonus=edge?.evType==='plus'?15:edge?.evType==='minus'?-15:0;
+      const hitBonus=(hitRate-55)*0.8;const gsBonus=gsAdj>2?6:gsAdj<-2?-8:0;
+      const score=intel.conf*0.35+hitBonus*0.35+evBonus*0.2+gsBonus*0.1;
+      allCandidates.push({p,stat,statLabel:statObj.l,val,line,score,hitRate,
+        evType:edge?.evType||'neutral',conf:intel.conf,gsAdj,
+        ppLiveLine:ppData&&ppLive,ppType:ppData?.type||'normal',
+        bookLine:edge?.bookLine||null,bookName:edge?.bookName||null,diff:edge?.diff||0});
+    });
+  });
+  allCandidates.sort((a,b)=>b.score-a.score);
+  const playerCount={};const statCount={};const chosen=[];
+  for(const c of allCandidates){
+    if(chosen.length>=Math.min(aiLegs*4,28))break;
+    const pid=c.p.id;const st=c.stat;
+    if((playerCount[pid]||0)>=2)continue;
+    if((statCount[st]||0)>=(aiLegs<=3?2:3))continue;
+    playerCount[pid]=(playerCount[pid]||0)+1;
+    statCount[st]=(statCount[st]||0)+1;
+    chosen.push(c);
+  }
+  const candidateStr=chosen.map(c=>{
+    const evStr=c.evType==='plus'?` | +EV: PP ${c.line} vs ${c.bookName||'book'} ${c.bookLine} (${c.diff>0?'+':''}${c.diff})`:c.evType==='minus'?' | -EV (PP harder than book)':'';
+    return `${c.p.name} (${c.p.pos}/${c.p.abbr}) — ${c.statLabel}: avg ${c.val.toFixed(1)}, line ${c.line}, hit rate ${c.hitRate}%${evStr}, game script ${c.gsAdj>0?'+':''}${c.gsAdj}, conf ${c.conf}%, score ${c.score.toFixed(1)}${c.ppType!=='normal'?' | PP: '+c.ppType.toUpperCase():''}`;
+  }).join('\n');
+  const hitRateContext={NBA:'BLK 69.9% · STL 61.9% · REB 58.4% · AST 57.1% · PTS 55.7% · PRA 54.7%',NFL:'Rush Yds 58% · Rec 57% · Pass Yds 56% · Rec Yds 54% · TDs 48%',MLB:'Ks 62% · ER 57% · Hits 55% · RBI 52% · HR 45%',NHL:'Saves 63% · Shots 58% · Ast 55% · Pts 54% · Goals 47%'}[sport];
+  const be=getBreakEven(aiLegs,ppPlay);
   try{
-    const text=await callAI(SHARP_SYS,`Generate the sharpest ${aiLegs}-leg ${sport} ${aiPickType.toUpperCase()} picks for ${plat.name}.
+    const text=await callAI(SHARP_SYS,`Build the sharpest ${aiLegs}-leg ${sport} parlay for ${plat.name}. Play: ${ppPlay}. Break-even: ${be}%/leg.
+PP lines: ${ppLive?`LIVE (${ppCount})`:'estimated'} | Props: ${propsLive?'LIVE':'N/A'} | Odds: ${oddsLive?'LIVE':'simulated'}
+Hit rates (${sport}): ${hitRateContext}
+IMPORTANT: Mix stat categories across legs — do NOT stack all Points or all of one stat type.
 
-DATA AVAILABLE:
-- PP lines: ${ppLive?`LIVE (${ppCount} loaded)`:'estimated'}
-- Book player props: ${propsLive?'LIVE from FD/DK':'not available'}
-- Spread odds: ${oddsLive?'LIVE':'simulated'}
-${myState?`- State: ${myState}. ${plat.name} ${isLegal(aiPlatform)?'IS':'NOT'} available.`:''}
+CANDIDATE LEGS ranked by composite score (hit rate + EV vs book + game script + confidence):
+${candidateStr}
 
-SHARP FRAMEWORK:
-${hitRateNote}
-${gameScriptNote}
-Break-even required: ${getBreakEven(aiLegs,ppPlay)}% per leg for ${ppPlay} play.
-
-PLAYER POOL (ranked by composite edge score):
-${pool.map(p=>pStr(p)).join('\n')}
-
-Pick ONLY ${aiLegs} players. For each pick explain: (1) stat hit rate edge, (2) PP line vs book EV signal, (3) game script impact, (4) confidence rating. Then give overall slip grade A-F based on break-even math.`,1600);
-    el.innerHTML=`<div class="aibox"><div class="ailbl"><div class="aidt"></div>${aiLegs}-Leg ${plat.name} Picks · v7 ENGINE</div><div class="aitxt">${text.replace(/\n\n/g,'</p><p style="margin-top:12px">').replace(/\n/g,'<br>')}</div><div style="margin-top:12px;display:flex;gap:5px;flex-wrap:wrap"><span class="chip cg">${aiLegs} LEGS</span><span class="chip cb">${plat.name}</span><span class="${ppLive?'chip cgr':'chip cg'}">${ppLive?'PP LIVE':'PP EST'}</span><span class="${propsLive?'chip cgr':'chip cg'}">${propsLive?'PROPS LIVE':'PROPS N/A'}</span><span class="${oddsLive?'chip cgr':'chip cg'}">${oddsLive?'ODDS LIVE':'ODDS SIM'}</span></div></div>`;
+Pick the ${aiLegs} BEST legs. For each: Player · Stat · Line · MORE or LESS · 1-2 sentence sharp reasoning (cite hit rate, EV, or script). End with parlay grade A-F and one sentence on break-even math.`,1600);
+    el.innerHTML=`<div class="aibox">
+      <div class="ailbl"><div class="aidt"></div>${aiLegs}-Leg ${plat.name} Sharp Picks · ALL CATEGORIES</div>
+      <div class="aitxt">${text.replace(/\n\n/g,'</p><p style="margin-top:12px">').replace(/\n/g,'<br>')}</div>
+      <div style="margin-top:12px;display:flex;gap:5px;flex-wrap:wrap">
+        <span class="chip cg">${aiLegs} LEGS</span>
+        <span class="chip cb">${plat.name}</span>
+        <span class="chip" style="background:rgba(168,85,247,.12);color:#A855F7;border:1px solid rgba(168,85,247,.3)">ALL STATS</span>
+        <span class="${ppLive?'chip cgr':'chip cg'}">${ppLive?'PP LIVE':'PP EST'}</span>
+        <span class="${oddsLive?'chip cgr':'chip cg'}">${oddsLive?'ODDS LIVE':'ODDS SIM'}</span>
+      </div></div>`;
   }catch(e){
-    const picks=scored.slice(0,aiLegs);
-    el.innerHTML=picks.map(p=>{const intel=getIntel(p);const line=suggestLine(p);const c=intel.conf;const hr=getStatHitRate(getPrimStat(p));const edge=getEdge(p);
-      return`<div style="background:var(--c2);border-left:3px solid var(--grn);padding:10px 13px;margin-bottom:8px;border-radius:0 3px 3px 0">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px">${p.name}</div>
-        <div style="font-size:11px;color:var(--gold);margin:2px 0">OVER ${line} ${statLbl()} · ${plat.name}</div>
-        <div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap">
-          <span class="hit-rate-badge ${hr>=62?'hr-hot':hr>=55?'hr-mid':'hr-cold'}">${hr}% HIT</span>
-          ${edge?`<span class="ev-badge ${edge.evType==='plus'?'ev-plus':edge.evType==='minus'?'ev-minus':'ev-neutral'}">${edge.evType==='plus'?'⚡ +EV':edge.evType==='minus'?'⚠ -EV':'FAIR'}</span>`:''}
-          <span class="conf-badge ${c>=70?'cb-hi':c>=55?'cb-mid':'cb-lo'}">${c}%</span>
-        </div>
-      </div>`;}).join('');
+    el.innerHTML=`<div class="slabel" style="margin-bottom:10px">Top Picks — All Categories</div>`+
+    chosen.slice(0,aiLegs).map(c=>{
+      const hrCls=c.hitRate>=62?'hr-hot':c.hitRate>=55?'hr-mid':'hr-cold';
+      const evCls=c.evType==='plus'?'ev-plus':c.evType==='minus'?'ev-minus':'ev-neutral';
+      return`<div style="background:var(--c2);border-left:3px solid var(--grn);padding:11px 14px;margin-bottom:8px;border-radius:0 3px 3px 0">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:13px">${c.p.name}</div>
+        <div style="font-size:11px;color:var(--gold);margin:3px 0">MORE ${c.line} ${c.statLabel} · ${plat.name}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px">
+          <span class="hit-rate-badge ${hrCls}">${c.hitRate}% HIT</span>
+          <span class="ev-badge ${evCls}">${c.evType==='plus'?'⚡ +EV':c.evType==='minus'?'⚠ -EV':'FAIR'}</span>
+          <span class="conf-badge ${c.conf>=70?'cb-hi':c.conf>=55?'cb-mid':'cb-lo'}">${c.conf}%</span>
+        </div></div>`;
+    }).join('');
   }
 }
 
