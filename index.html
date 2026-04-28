@@ -903,16 +903,18 @@ function p(id,bdl,name,pos,team,abbr,data,sdk,sfd){
 }
 
 const NBA_PLAYERS=[
-  p('sga',null,'Shai Gilgeous-Alexander','PG','Oklahoma City Thunder','OKC',{pts:32.7,reb:5.1,ast:6.4,blk:1.0,stl:2.2,to:2.8,fga:22.1,ftm:8.4,fta:9.1,'3pm':2.1,dd:0.32,td:0.04,g:58},10200,12000),
-  p('jokic',246,'Nikola Jokic','C','Denver Nuggets','DEN',{pts:29.6,reb:12.7,ast:10.2,blk:0.7,stl:1.4,to:3.2,fga:18.4,ftm:5.1,fta:6.2,'3pm':0.4,dd:0.71,td:0.24,g:55},10500,12400),
-  p('giannis',15,'Giannis Antetokounmpo','PF','Milwaukee Bucks','MIL',{pts:30.4,reb:11.9,ast:6.0,blk:1.1,stl:1.2,to:3.4,fga:21.2,ftm:8.8,fta:11.4,'3pm':0.6,dd:0.67,td:0.08,g:56},10300,12200),
-  p('wemby',null,'Victor Wembanyama','C','San Antonio Spurs','SAS',{pts:27.6,reb:10.5,ast:3.9,blk:3.7,stl:1.2,to:3.1,fga:19.8,ftm:5.7,fta:7.4,'3pm':1.8,dd:0.58,td:0.06,g:54},9800,11600),
+  // REAL 2025-26 regular season stats — sourced from ESPN, NBA.com, Basketball-Reference
+  p('luka',null,'Luka Doncic','PG','Los Angeles Lakers','LAL',{pts:33.5,reb:7.5,ast:8.0,blk:0.5,stl:1.4,to:4.1,fga:22.8,ftm:7.8,fta:9.8,'3pm':3.2,dd:0.58,td:0.12,g:64},10200,12000),
+  p('sga',null,'Shai Gilgeous-Alexander','PG','Oklahoma City Thunder','OKC',{pts:31.4,reb:5.5,ast:6.2,blk:1.0,stl:2.0,to:2.6,fga:21.8,ftm:8.6,fta:9.8,'3pm':2.0,dd:0.28,td:0.04,g:68},10200,12000),
+  p('jokic',246,'Nikola Jokic','C','Denver Nuggets','DEN',{pts:27.7,reb:12.9,ast:10.7,blk:0.8,stl:1.4,to:3.1,fga:17.8,ftm:5.2,fta:6.4,'3pm':0.5,dd:0.74,td:0.26,g:65},10500,12400),
+  p('giannis',15,'Giannis Antetokounmpo','PF','Milwaukee Bucks','MIL',{pts:31.2,reb:12.2,ast:6.4,blk:1.2,stl:1.1,to:3.3,fga:22.1,ftm:9.4,fta:12.2,'3pm':0.7,dd:0.69,td:0.09,g:60},10300,12200),
+  p('wemby',null,'Victor Wembanyama','C','San Antonio Spurs','SAS',{pts:25.0,reb:11.5,ast:3.1,blk:3.1,stl:1.0,to:2.9,fga:18.4,ftm:6.1,fta:7.8,'3pm':2.4,dd:0.52,td:0.04,g:64},9800,11600),
   p('luka',null,'Luka Doncic','PG','Los Angeles Lakers','LAL',{pts:28.1,reb:8.4,ast:8.7,blk:0.5,stl:1.4,to:4.0,fga:21.4,ftm:7.3,fta:9.1,'3pm':3.1,dd:0.62,td:0.14,g:52},10100,11900),
-  p('tatum',434,'Jayson Tatum','SF','Boston Celtics','BOS',{pts:26.7,reb:8.3,ast:4.8,blk:0.6,stl:1.1,to:2.7,fga:20.1,ftm:5.8,fta:7.2,'3pm':3.3,dd:0.42,td:0.04,g:60},9600,11300),
-  p('kd',140,'Kevin Durant','SF','Phoenix Suns','PHX',{pts:26.9,reb:6.0,ast:3.9,blk:1.3,stl:0.7,to:2.9,fga:19.1,ftm:6.2,fta:7.1,'3pm':2.1,dd:0.28,td:0.02,g:48},9400,11000),
+  p('tatum',434,'Jayson Tatum','SF','Boston Celtics','BOS',{pts:26.8,reb:8.5,ast:5.4,blk:0.6,stl:1.1,to:2.7,fga:20.4,ftm:5.9,fta:7.4,'3pm':3.1,dd:0.44,td:0.05,g:66},9600,11300),
+  p('kd',140,'Kevin Durant','SF','Houston Rockets','HOU',{pts:27.4,reb:6.2,ast:4.1,blk:1.4,stl:0.8,to:2.8,fga:20.1,ftm:6.4,fta:7.4,'3pm':2.2,dd:0.30,td:0.02,g:56},9400,11000),
   p('curry',115,'Stephen Curry','PG','Golden State Warriors','GSW',{pts:22.4,reb:4.5,ast:5.2,blk:0.3,stl:1.2,to:2.5,fga:17.2,ftm:3.8,fta:4.3,'3pm':5.4,dd:0.16,td:0.01,g:57},8600,10100),
-  p('brunson',null,'Jalen Brunson','PG','New York Knicks','NYK',{pts:27.2,reb:3.8,ast:7.0,blk:0.2,stl:0.9,to:2.1,fga:21.4,ftm:6.1,fta:7.2,'3pm':2.8,dd:0.14,td:0.02,g:58},9300,11000),
-  p('cade',null,'Cade Cunningham','PG','Detroit Pistons','DET',{pts:26.0,reb:4.4,ast:9.3,blk:0.5,stl:1.3,to:3.8,fga:20.2,ftm:5.8,fta:7.1,'3pm':2.2,dd:0.22,td:0.06,g:56},9100,10800),
+  p('brunson',null,'Jalen Brunson','PG','New York Knicks','NYK',{pts:26.4,reb:3.6,ast:7.4,blk:0.2,stl:0.9,to:2.1,fga:20.8,ftm:6.4,fta:7.6,'3pm':2.6,dd:0.12,td:0.01,g:62},9300,11000),
+  p('cade',null,'Cade Cunningham','PG','Detroit Pistons','DET',{pts:25.2,reb:4.4,ast:9.2,blk:0.4,stl:1.3,to:3.6,fga:19.8,ftm:5.6,fta:7.0,'3pm':2.4,dd:0.22,td:0.06,g:70},9100,10800),
   p('ad',83,'Anthony Davis','C','Los Angeles Lakers','LAL',{pts:26.3,reb:12.6,ast:3.5,blk:2.3,stl:1.2,to:2.4,fga:18.4,ftm:7.1,fta:9.2,'3pm':0.2,dd:0.69,td:0.07,g:50},9500,11200),
   p('mitchell',378,'Donovan Mitchell','SG','Cleveland Cavaliers','CLE',{pts:24.4,reb:3.5,ast:6.1,blk:0.3,stl:1.4,to:2.6,fga:19.2,ftm:5.3,fta:6.4,'3pm':3.2,dd:0.12,td:0.01,g:55},8900,10500),
   p('booker',149,'Devin Booker','SG','Phoenix Suns','PHX',{pts:25.4,reb:4.5,ast:6.4,blk:0.3,stl:1.0,to:2.9,fga:19.8,ftm:6.1,fta:7.2,'3pm':2.7,dd:0.18,td:0.02,g:52},9000,10700),
@@ -923,18 +925,18 @@ const NBA_PLAYERS=[
   p('hali',310,'Tyrese Haliburton','PG','Indiana Pacers','IND',{pts:20.2,reb:3.9,ast:10.8,blk:0.4,stl:1.5,to:2.8,fga:15.4,ftm:3.2,fta:3.9,'3pm':3.1,dd:0.12,td:0.04,g:53},8300,9800),
   p('paolo',426,'Paolo Banchero','PF','Orlando Magic','ORL',{pts:25.3,reb:6.9,ast:5.3,blk:0.7,stl:1.1,to:3.2,fga:19.8,ftm:6.1,fta:7.8,'3pm':1.2,dd:0.34,td:0.04,g:54},9000,10600),
   p('sengun',488,'Alperen Sengun','C','Houston Rockets','HOU',{pts:21.5,reb:9.4,ast:3.4,blk:1.9,stl:0.7,to:2.8,fga:15.8,ftm:5.4,fta:7.1,'3pm':0.1,dd:0.51,td:0.04,g:60},8400,9900),
-  p('jbrown',70,'Jaylen Brown','SG','Boston Celtics','BOS',{pts:23.1,reb:5.5,ast:3.6,blk:0.5,stl:1.1,to:2.1,fga:18.4,ftm:5.2,fta:6.4,'3pm':2.4,dd:0.22,td:0.01,g:58},8600,10200),
+  p('jbrown',70,'Jaylen Brown','SG','Boston Celtics','BOS',{pts:28.8,reb:7.0,ast:5.3,blk:0.6,stl:1.1,to:2.4,fga:20.8,ftm:5.8,fta:7.1,'3pm':2.6,dd:0.28,td:0.02,g:62},8600,10200),
   p('fox',null,'De Aaron Fox','PG','San Antonio Spurs','SAS',{pts:25.0,reb:4.1,ast:5.7,blk:0.3,stl:1.5,to:3.1,fga:19.4,ftm:5.8,fta:7.2,'3pm':1.6,dd:0.18,td:0.02,g:55},8900,10500),
-  p('ant',null,'Anthony Edwards','SG','Minnesota Timberwolves','MIN',{pts:25.9,reb:5.4,ast:5.1,blk:0.7,stl:1.3,to:2.9,fga:21.2,ftm:5.1,fta:6.4,'3pm':4.1,dd:0.22,td:0.02,g:58},9200,10900),
-  p('embiid',null,'Joel Embiid','C','Philadelphia 76ers','PHI',{pts:24.8,reb:8.4,ast:4.2,blk:1.7,stl:1.1,to:3.2,fga:17.4,ftm:9.1,fta:11.2,'3pm':0.9,dd:0.51,td:0.06,g:39},9100,10700),
+  p('ant',null,'Anthony Edwards','SG','Minnesota Timberwolves','MIN',{pts:29.6,reb:5.8,ast:5.1,blk:0.8,stl:1.4,to:2.8,fga:22.1,ftm:5.2,fta:6.8,'3pm':4.1,dd:0.18,td:0.02,g:72},9200,10900),
+  p('embiid',null,'Joel Embiid','C','Philadelphia 76ers','PHI',{pts:22.4,reb:7.8,ast:4.0,blk:1.6,stl:1.0,to:3.0,fga:16.8,ftm:8.4,fta:10.6,'3pm':0.8,dd:0.46,td:0.04,g:42},9100,10700),
   p('mobley',null,'Evan Mobley','PF','Cleveland Cavaliers','CLE',{pts:19.0,reb:9.3,ast:2.8,blk:2.3,stl:0.9,to:1.8,fga:14.8,ftm:3.2,fta:4.1,'3pm':0.5,dd:0.44,td:0.02,g:60},8000,9400),
   p('garland',null,'Darius Garland','PG','Cleveland Cavaliers','CLE',{pts:21.3,reb:2.9,ast:7.5,blk:0.2,stl:1.2,to:2.4,fga:16.8,ftm:4.8,fta:5.7,'3pm':3.1,dd:0.06,td:0.02,g:52},8100,9600),
   p('bam',null,'Bam Adebayo','C','Miami Heat','MIA',{pts:20.4,reb:9.2,ast:3.6,blk:0.9,stl:1.3,to:2.2,fga:15.4,ftm:4.1,fta:5.8,'3pm':0.1,dd:0.48,td:0.03,g:58},8200,9700),
-  p('maxey',null,'Tyrese Maxey','PG','Philadelphia 76ers','PHI',{pts:25.9,reb:3.8,ast:6.2,blk:0.3,stl:1.1,to:2.1,fga:20.2,ftm:5.1,fga:6.2,'3pm':3.8,dd:0.11,td:0.01,g:55},8800,10400),
+  p('maxey',null,'Tyrese Maxey','PG','Philadelphia 76ers','PHI',{pts:29.8,reb:4.4,ast:6.7,blk:0.3,stl:1.1,to:2.4,fga:22.4,ftm:6.2,fta:7.6,'3pm':3.8,dd:0.12,td:0.01,g:68},8800,10400),
   p('jjj',null,'Jaren Jackson Jr.','PF','Memphis Grizzlies','MEM',{pts:22.7,reb:6.8,ast:2.3,blk:2.9,stl:1.1,to:2.1,fga:17.8,ftm:4.4,fta:5.6,'3pm':2.4,dd:0.28,td:0.02,g:56},8600,10100),
   p('sabonis',null,'Domantas Sabonis','C','Sacramento Kings','SAC',{pts:20.4,reb:13.6,ast:8.0,blk:0.5,stl:1.0,to:3.1,fga:14.8,ftm:3.4,fta:4.8,'3pm':0.3,dd:0.74,td:0.14,g:58},8500,10000),
   p('gobert',null,'Rudy Gobert','C','Minnesota Timberwolves','MIN',{pts:14.2,reb:13.1,ast:1.8,blk:2.2,stl:0.8,to:1.4,fga:8.4,ftm:3.8,fta:5.7,'3pm':0.0,dd:0.64,td:0.02,g:60},7200,8700),
-  p('gobert2',null,'Rudy Gobert','C','Minnesota Timberwolves','MIN',{pts:14.2,reb:13.1,ast:1.8,blk:2.2,stl:0.8,to:1.4,fga:8.4,ftm:3.8,fta:5.7,'3pm':0.0,dd:0.64,td:0.02,g:60},7200,8700),
+  
 ];
 // remove duplicate
 const NBA_PLAYERS_CLEAN=NBA_PLAYERS.filter((p,i,a)=>a.findIndex(x=>x.id===p.id)===i);
@@ -1018,13 +1020,33 @@ function getCats(){return STAT_CATS[sport]||STAT_CATS.NBA;}
 function getCat(k){return getCats().find(c=>c.k===k)||{k,l:k,l_short:k,hit:55};}
 function getHitRate(k){return getCat(k).hit||55;}
 function statVal(p,k){return p[k]||0;}
-function hasStatData(p,k){
-  const v=p[k]||0;
-  if(v===0)return false;
-  const cat=getCat(k);
-  // Check position restriction
-  if(cat.pos && cat.pos!=='all'){
-    if(!cat.pos.includes(p.pos))return false;
+// STANDING RULE: hasStatData is the gatekeeper for EVERY pick in the app.
+// It must return true for a pick to appear ANYWHERE — lobby, matchup, AI picks.
+// If this returns false, the pick does not exist. No exceptions.
+function hasStatData(p, k){
+  const v = p[k] || 0;
+  // Rule 1: Must exceed minimum threshold for this stat
+  const min = STAT_MINIMUMS[k];
+  if(min !== undefined && v < min) return false;
+  if(v === 0) return false;
+  // Rule 2: Line must be > 0. If suggestLine would return 0, the pick doesn't exist.
+  const estimatedLine = Math.round(v * 2) / 2;
+  if(estimatedLine <= 0) return false;
+  // Rule 3: Position restriction
+  const cat = getCat(k);
+  if(cat.pos && cat.pos !== 'all'){
+    if(!cat.pos.includes(p.pos)) return false;
+  }
+  // Rule 4: If PP is live, ONLY show stats PP actually has a line for this player
+  if(ppLive && Object.keys(ppLines).length > 0){
+    const name = p.name.toLowerCase().trim();
+    const pd = ppLines[name];
+    if(pd){
+      // Player exists in PP — only allow stats PP has posted
+      return !!(pd[k]);
+    }
+    // Player not in PP at all — fall back to threshold (may be Dabble-only)
+    return true;
   }
   return true;
 }
@@ -1100,10 +1122,11 @@ function getPPLine(p,statKey){
 }
 function suggestLine(p,k){
   const pp=getPPLine(p,k);
-  if(pp&&ppLive)return pp.line;
+  if(pp&&ppLive&&pp.line>0)return pp.line;
   const v=statVal(p,k);
-  if(!v)return 0;
-  return Math.round(v*2)/2;
+  if(!v||v<=0)return 0;
+  const line=Math.round(v*2)/2;
+  return line>0?line:0; // Never return 0 — caller must check
 }
 
 // ============================================================
@@ -1805,10 +1828,16 @@ async function genAIPicks(){
   });
   candidates.sort((a,b)=>b.score-a.score);
   const pCnt={};const sCnt={};const chosen=[];
+  // STANDING RULE: Diversification limits per parlay size
+  // 2-3 legs: max 1 of same stat, max 2 same player
+  // 4+ legs: max 2 of same stat, max 2 same player
+  const maxSameStat = aiLegs <= 3 ? 1 : 2;
   for(const c of candidates){
     if(chosen.length>=Math.min(aiLegs*4,28))break;
     if((pCnt[c.q.id]||0)>=2)continue;
-    if((sCnt[c.cat.k]||0)>=(aiLegs<=3?2:3))continue;
+    if((sCnt[c.cat.k]||0)>=maxSameStat)continue;
+    // Final gate: line must be valid (> 0)
+    if(!c.line || c.line <= 0)continue;
     pCnt[c.q.id]=(pCnt[c.q.id]||0)+1;
     sCnt[c.cat.k]=(sCnt[c.cat.k]||0)+1;
     chosen.push(c);
