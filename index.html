@@ -1159,6 +1159,22 @@ let propsLive=false;
 let dateOffset=0; // 0=today, 1=tomorrow
 function getSelectedDate(offset=dateOffset){const d=new Date();d.setDate(d.getDate()+offset);return d.toISOString().split('T')[0];}
 function getDateLabel(){return dateOffset===0?'TODAY':'TOMORROW';}
+function getPlayingTeams(){
+  const teams=new Set();
+  todayGames.forEach(g=>{
+    [g.home_team,g.visitor_team].forEach(t=>{if(!t)return;if(t.abbreviation)teams.add(t.abbreviation);if(t.full_name)teams.add(t.full_name);});
+  });
+  oddsData.forEach(g=>{
+    if(g.home_team){teams.add(g.home_team);teams.add(g.home_team.split(' ').pop());}
+    if(g.away_team){teams.add(g.away_team);teams.add(g.away_team.split(' ').pop());}
+  });
+  return teams;
+}
+function isPlayingOnDate(p){
+  const teams=getPlayingTeams();
+  if(!teams.size)return true;
+  return teams.has(p.team)||teams.has(p.abbr);
+}
 
 // =================== DK / FD SCORING ===================
 function dkFP(p){
@@ -2326,9 +2342,15 @@ function updateMnav(){const b=document.getElementById('mnav-badge');if(!b)return
 async function genAIPicks(){
   const el=document.getElementById('ai-picks-out');const plat=PLATFORMS[aiPlatform];
   if(myState&&!isLegal(aiPlatform)&&aiPlatform!=='vg'){el.innerHTML=`<div style="background:var(--redd);border:1px solid rgba(224,68,58,.3);border-radius:3px;padding:13px;font-size:12px;color:var(--red)">${plat.name} not available in ${myState}.</div>`;return;}
-  el.innerHTML=`<div class="aibox"><div class="ailbl"><div class="aidt"></div>Running v7 edge engine...</div><div class="ls" style="padding:25px"><div class="spin"></div></div></div>`;
+  const dateLbl=getDateLabel();
+  const eligible=allPlayers.filter(isPlayingOnDate);
+  if(!eligible.length){
+    el.innerHTML=`<div class="aibox" style="border-color:rgba(229,181,58,.3)"><div class="ailbl" style="color:var(--ylw)"><div class="aidt" style="background:var(--ylw)"></div>No ${sport} games for ${dateLbl}</div><div class="aitxt">No teams scheduled for ${dateLbl.toLowerCase()}. Switch the date toggle or sport, or add an Odds API key in ⚙ for upcoming game data.</div></div>`;
+    return;
+  }
+  el.innerHTML=`<div class="aibox"><div class="ailbl"><div class="aidt"></div>Running v7 edge engine for ${dateLbl}...</div><div class="ls" style="padding:25px"><div class="spin"></div></div></div>`;
   // V7: Sort by composite score — conf (40%) + hit rate bonus (40%) + EV edge (20%)
-  const scored=[...allPlayers].map(p=>{
+  const scored=eligible.map(p=>{
     const intel=getIntel(p);const st=getPrimStat(p);
     const hr=getStatHitRate(st);const edge=getEdge(p);
     const evBonus=edge?.evType==='plus'?10:edge?.evType==='minus'?-10:0;
@@ -2338,7 +2360,7 @@ async function genAIPicks(){
   const hitRateNote=`NBA stat hit rates: BLK 69.9%, STL 61.9%, REB 58.4%, AST 57.1%, PTS 55.7%, PRA 54.7%. Favor high hit rate stats for safer legs.`;
   const gameScriptNote=gameScripts&&Object.keys(gameScripts).length?`Game scripts active — ${Object.entries(gameScripts).filter(([,v])=>v.script!=='normal').map(([team,v])=>`${team}: ${v.script}${v.isFav?' (FAV)':' (DOG)'}`).slice(0,4).join(', ')}`:'Game scripts: simulated.';
   try{
-    const text=await callAI(SHARP_SYS,`Generate the sharpest ${aiLegs}-leg ${sport} ${aiPickType.toUpperCase()} picks for ${plat.name}.
+    const text=await callAI(SHARP_SYS,`Generate the sharpest ${aiLegs}-leg ${sport} ${aiPickType.toUpperCase()} picks for ${plat.name}. SLATE: ${dateLbl} (${getSelectedDate()}). ONLY use the players listed below — they are the ones with games on ${dateLbl}.
 
 DATA AVAILABLE:
 - PP lines: ${ppLive?`LIVE (${ppCount} loaded)`:'estimated'}
@@ -2355,7 +2377,7 @@ PLAYER POOL (ranked by composite edge score):
 ${pool.map(p=>pStr(p)).join('\n')}
 
 Pick ONLY ${aiLegs} players. For each pick explain: (1) stat hit rate edge, (2) PP line vs book EV signal, (3) game script impact, (4) confidence rating. Then give overall slip grade A-F based on break-even math.`,1600);
-    el.innerHTML=`<div class="aibox"><div class="ailbl"><div class="aidt"></div>${aiLegs}-Leg ${plat.name} Picks · v7 ENGINE</div><div class="aitxt">${text.replace(/\n\n/g,'</p><p style="margin-top:12px">').replace(/\n/g,'<br>')}</div><div style="margin-top:12px;display:flex;gap:5px;flex-wrap:wrap"><span class="chip cg">${aiLegs} LEGS</span><span class="chip cb">${plat.name}</span><span class="${ppLive?'chip cgr':'chip cg'}">${ppLive?'PP LIVE':'PP EST'}</span><span class="${propsLive?'chip cgr':'chip cg'}">${propsLive?'PROPS LIVE':'PROPS N/A'}</span><span class="${oddsLive?'chip cgr':'chip cg'}">${oddsLive?'ODDS LIVE':'ODDS SIM'}</span></div></div>`;
+    el.innerHTML=`<div class="aibox"><div class="ailbl"><div class="aidt"></div>${aiLegs}-Leg ${plat.name} Picks · ${dateLbl} · v7 ENGINE</div><div class="aitxt">${text.replace(/\n\n/g,'</p><p style="margin-top:12px">').replace(/\n/g,'<br>')}</div><div style="margin-top:12px;display:flex;gap:5px;flex-wrap:wrap"><span class="chip cg">${aiLegs} LEGS</span><span class="chip cb">${plat.name}</span><span class="chip" style="background:rgba(59,130,246,.12);color:var(--blu);border:1px solid rgba(59,130,246,.3)">${dateLbl} · ${eligible.length} eligible</span><span class="${ppLive?'chip cgr':'chip cg'}">${ppLive?'PP LIVE':'PP EST'}</span><span class="${propsLive?'chip cgr':'chip cg'}">${propsLive?'PROPS LIVE':'PROPS N/A'}</span><span class="${oddsLive?'chip cgr':'chip cg'}">${oddsLive?'ODDS LIVE':'ODDS SIM'}</span></div></div>`;
   }catch(e){
     const picks=scored.slice(0,aiLegs);
     el.innerHTML=picks.map(p=>{const intel=getIntel(p);const line=suggestLine(p);const c=intel.conf;const hr=getStatHitRate(getPrimStat(p));const edge=getEdge(p);
