@@ -899,7 +899,8 @@ main{padding:18px 20px;max-width:1200px;margin:0 auto;}
     <button class="ptbtn" onclick="setAILegs(6,this)">6-Leg</button>
   </div>
   <div class="ptypes" style="margin-bottom:16px" id="ai-pick-types"></div>
-  <button class="mbtn bgold" style="max-width:280px;margin-bottom:20px" onclick="genAIPicks()">GENERATE SHARP PICKS</button>
+  <div id="ai-schedule-banner" style="margin-bottom:14px"></div>
+  <button class="mbtn bgold" style="max-width:280px;margin-bottom:20px" onclick="genAIPicks()" id="ai-gen-btn">GENERATE SHARP PICKS</button>
   <div id="ai-picks-out"></div>
 </div>
 
@@ -1157,8 +1158,17 @@ let gameScripts={};
 let propsLive=false;
 // DATE STATE
 let dateOffset=0; // 0=today, 1=tomorrow
-function getSelectedDate(offset=dateOffset){const d=new Date();d.setDate(d.getDate()+offset);return d.toISOString().split('T')[0];}
+function getSelectedDate(offset=dateOffset){
+  // Use LOCAL date (not UTC) — fixes wrong-date queries late at night ET
+  const d=new Date();d.setDate(d.getDate()+offset);
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 function getDateLabel(){return dateOffset===0?'TODAY':'TOMORROW';}
+function getDateDisplay(){
+  const d=new Date();d.setDate(d.getDate()+dateOffset);
+  return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+}
 function getPlayingTeams(){
   const teams=new Set();
   todayGames.forEach(g=>{
@@ -1170,9 +1180,23 @@ function getPlayingTeams(){
   });
   return teams;
 }
+function getScheduledMatchups(){
+  // Returns array of {home, away, time} from real data sources only
+  const out=[];
+  todayGames.forEach(g=>{
+    if(g.home_team&&g.visitor_team)out.push({home:g.home_team.full_name,homeAbbr:g.home_team.abbreviation,away:g.visitor_team.full_name,awayAbbr:g.visitor_team.abbreviation,time:g.status||'TBD',source:'BDL'});
+  });
+  oddsData.forEach(g=>{
+    if(g.home_team&&g.away_team){
+      const dup=out.some(x=>x.home===g.home_team||x.home.includes(g.home_team.split(' ').pop()));
+      if(!dup)out.push({home:g.home_team,homeAbbr:g.home_team.split(' ').pop(),away:g.away_team,awayAbbr:g.away_team.split(' ').pop(),time:g.commence_time?new Date(g.commence_time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'TBD',source:'OddsAPI'});
+    }
+  });
+  return out;
+}
 function isPlayingOnDate(p){
   const teams=getPlayingTeams();
-  if(!teams.size)return true;
+  if(!teams.size)return false; // NO fallback — if we don't know the schedule, we don't pick
   return teams.has(p.team)||teams.has(p.abbr);
 }
 
@@ -1841,7 +1865,7 @@ function setSport(s,el){
   document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));if(el)el.classList.add('active');
   pickType=SPORT_PICKS[s][0].k;
   renderPickTypes('ptypes-players');renderPickTypes('ptypes-parlay');
-  renderPlayers();renderParlayPool();renderDFSPlayers();renderSpreads();renderInjuries();updateAIBanner();
+  renderPlayers();renderParlayPool();renderDFSPlayers();renderSpreads();renderInjuries();updateAIBanner();renderAISchedule();
   buildGameScripts();
   save();
   if(isLobbyView){lobbySelections={};lobbyStatFilter=SPORT_PICKS[s][0].k;renderLobby();}
@@ -2083,7 +2107,7 @@ async function runEngine(){
     engineRan=true;
     clearTimeout(fallbackTimer);
     setTimeout(hideOverlay,500);
-    renderGames();renderPlayers();renderSpreads();renderInjuries();renderParlay();
+    renderGames();renderPlayers();renderSpreads();renderInjuries();renderParlay();renderAISchedule();
   }catch(e){
     clearTimeout(fallbackTimer);
     log('✗ Error: '+e.message);
@@ -2320,7 +2344,7 @@ async function optimizeDFS(){
   try{const text=await callAI(SHARP_SYS,`Analyze this ${plat.name} ${sport} DFS lineup:\n${dfsTeam.map(p=>`${p.pos} ${p.name} (${p.abbr}): ${dfsPlatform==='fd'?fdFP(p):dkFP(p)} proj FP${plat.salary?`, $${dfsPlatform==='dk'?p.sdk||0:p.sfd||0}`:''}`).join('\n')}\nTotal: ${totFP.toFixed(1)} FP.${plat.salary?` Cap: $${plat.cap?.toLocaleString()}.`:''} DK formula: PTS×1+REB×1.25+AST×1.5+STL×2+BLK×2-TO×0.5. FD: PTS×1+REB×1.2+AST×1.5+STL×3+BLK×3-TO×1. Ceiling/floor? Cash or GPP? Swap suggestions?`);el.innerHTML=`<div class="aibox"><div class="ailbl"><div class="aidt"></div>Lineup Analysis</div><div class="aitxt">${text.replace(/\n/g,'<br>')}</div></div>`;}
   catch(e){el.innerHTML=`<div class="aibox"><div class="aitxt">${dfsTeam.length} players · ${totFP.toFixed(1)} proj FP.</div></div>`;}
 }
-function setAIPlat(p,el){aiPlatform=p;document.querySelectorAll('#panel-aipicks .platbtn').forEach(b=>b.classList.remove('active'));el.classList.add('active');updateAIBanner();}
+function setAIPlat(p,el){aiPlatform=p;document.querySelectorAll('#panel-aipicks .platbtn').forEach(b=>b.classList.remove('active'));el.classList.add('active');updateAIBanner();renderAISchedule();}
 function setAILegs(n,el){aiLegs=n;document.querySelectorAll('.ptypes .ptbtn').forEach(b=>b.classList.remove('active'));el.classList.add('active');}
 function setAIPT(t,el){aiPickType=t;document.querySelectorAll('#ai-pick-types .ptbtn').forEach(b=>b.classList.remove('active'));el.classList.add('active');}
 function isLegal(p){return !myState||PLATFORMS[p].legal.includes(myState);}
@@ -2339,13 +2363,38 @@ function setDate(offset,el){
   runEngine();
 }
 function updateMnav(){const b=document.getElementById('mnav-badge');if(!b)return;if(parlay.length){b.style.display='flex';b.textContent=parlay.length;}else{b.style.display='none';}}
+function renderAISchedule(){
+  const banner=document.getElementById('ai-schedule-banner');if(!banner)return;
+  const matchups=getScheduledMatchups();
+  const dateLbl=getDateLabel();const dateDisp=getDateDisplay();
+  const btn=document.getElementById('ai-gen-btn');
+  if(!matchups.length){
+    banner.innerHTML=`<div style="background:rgba(224,68,58,.08);border:1px solid rgba(224,68,58,.3);border-radius:4px;padding:11px 13px;font-size:11px;line-height:1.7">
+      <div style="color:var(--red);font-weight:700;letter-spacing:1px;font-family:'Syne',sans-serif;margin-bottom:5px">⚠ NO ${sport} GAMES CONFIRMED FOR ${dateLbl} (${dateDisp})</div>
+      <div style="color:var(--m2)">PropOS will not generate picks without verified game data. ${sport==='NBA'?'Ball Don\'t Lie returned 0 games for this date.':'Add an Odds API key in ⚙ Settings to load schedules.'} Try switching the date or sport.</div>
+    </div>`;
+    if(btn){btn.disabled=true;btn.style.opacity='.4';btn.style.cursor='not-allowed';}
+    return;
+  }
+  if(btn){btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';}
+  const list=matchups.slice(0,12).map(m=>`<span style="display:inline-block;background:var(--c2);border:1px solid var(--b2);border-radius:3px;padding:3px 8px;margin:2px 3px 2px 0;font-size:10px"><strong>${m.awayAbbr||'AWY'}</strong> @ <strong>${m.homeAbbr||'HOM'}</strong> <span style="color:var(--m)">· ${m.time}</span></span>`).join('');
+  banner.innerHTML=`<div style="background:rgba(29,185,84,.06);border:1px solid rgba(29,185,84,.3);border-radius:4px;padding:11px 13px">
+    <div style="color:var(--grn);font-weight:700;letter-spacing:1px;font-family:'Syne',sans-serif;font-size:10px;margin-bottom:6px">✓ ${matchups.length} ${sport} GAME${matchups.length!==1?'S':''} · ${dateLbl} (${dateDisp})</div>
+    <div>${list}${matchups.length>12?`<span style="font-size:10px;color:var(--m);margin-left:4px">+${matchups.length-12} more</span>`:''}</div>
+  </div>`;
+}
 async function genAIPicks(){
   const el=document.getElementById('ai-picks-out');const plat=PLATFORMS[aiPlatform];
   if(myState&&!isLegal(aiPlatform)&&aiPlatform!=='vg'){el.innerHTML=`<div style="background:var(--redd);border:1px solid rgba(224,68,58,.3);border-radius:3px;padding:13px;font-size:12px;color:var(--red)">${plat.name} not available in ${myState}.</div>`;return;}
-  const dateLbl=getDateLabel();
+  const dateLbl=getDateLabel();const dateDisp=getDateDisplay();
+  const matchups=getScheduledMatchups();
+  if(!matchups.length){
+    el.innerHTML=`<div class="aibox" style="border-color:rgba(224,68,58,.4)"><div class="ailbl" style="color:var(--red)"><div class="aidt" style="background:var(--red)"></div>Cannot generate — no game data for ${dateLbl}</div><div class="aitxt">PropOS refuses to generate picks without verified games. Add an Odds API key in ⚙ Settings, switch the date toggle, or pick a sport with games scheduled today.</div></div>`;
+    return;
+  }
   const eligible=allPlayers.filter(isPlayingOnDate);
   if(!eligible.length){
-    el.innerHTML=`<div class="aibox" style="border-color:rgba(229,181,58,.3)"><div class="ailbl" style="color:var(--ylw)"><div class="aidt" style="background:var(--ylw)"></div>No ${sport} games for ${dateLbl}</div><div class="aitxt">No teams scheduled for ${dateLbl.toLowerCase()}. Switch the date toggle or sport, or add an Odds API key in ⚙ for upcoming game data.</div></div>`;
+    el.innerHTML=`<div class="aibox" style="border-color:rgba(229,181,58,.4)"><div class="ailbl" style="color:var(--ylw)"><div class="aidt" style="background:var(--ylw)"></div>${matchups.length} games found for ${dateLbl} but no PropOS roster matches</div><div class="aitxt">Found these matchups: ${matchups.slice(0,6).map(m=>`${m.awayAbbr} @ ${m.homeAbbr}`).join(', ')}${matchups.length>6?', ...':''}<br><br>None of the players in PropOS's static roster are on those teams. The roster needs to be expanded for these matchups, or the player you're looking for isn't featured yet.</div></div>`;
     return;
   }
   el.innerHTML=`<div class="aibox"><div class="ailbl"><div class="aidt"></div>Running v7 edge engine for ${dateLbl}...</div><div class="ls" style="padding:25px"><div class="spin"></div></div></div>`;
@@ -2360,7 +2409,16 @@ async function genAIPicks(){
   const hitRateNote=`NBA stat hit rates: BLK 69.9%, STL 61.9%, REB 58.4%, AST 57.1%, PTS 55.7%, PRA 54.7%. Favor high hit rate stats for safer legs.`;
   const gameScriptNote=gameScripts&&Object.keys(gameScripts).length?`Game scripts active — ${Object.entries(gameScripts).filter(([,v])=>v.script!=='normal').map(([team,v])=>`${team}: ${v.script}${v.isFav?' (FAV)':' (DOG)'}`).slice(0,4).join(', ')}`:'Game scripts: simulated.';
   try{
-    const text=await callAI(SHARP_SYS,`Generate the sharpest ${aiLegs}-leg ${sport} ${aiPickType.toUpperCase()} picks for ${plat.name}. SLATE: ${dateLbl} (${getSelectedDate()}). ONLY use the players listed below — they are the ones with games on ${dateLbl}.
+    const matchupList=matchups.map(m=>`${m.awayAbbr||m.away} @ ${m.homeAbbr||m.home} (${m.time})`).join('; ');
+    const text=await callAI(SHARP_SYS,`Generate the sharpest ${aiLegs}-leg ${sport} ${aiPickType.toUpperCase()} picks for ${plat.name}.
+
+SLATE: ${dateLbl} ${dateDisp} (${getSelectedDate()})
+SCHEDULED MATCHUPS: ${matchupList}
+
+CRITICAL RULES:
+- ONLY pick players whose team appears in the matchups above. Do NOT pick anyone else.
+- If a player you'd normally like is not in this slate, skip them — do not invent a game.
+- If you don't have enough good options, return fewer legs and explain why rather than reaching.
 
 DATA AVAILABLE:
 - PP lines: ${ppLive?`LIVE (${ppCount} loaded)`:'estimated'}
@@ -2603,6 +2661,7 @@ function goTab(tab,el){
   document.querySelectorAll('.tab,.mni').forEach(t=>t.classList.remove('active'));document.querySelectorAll(`[data-tab="${tab}"]`).forEach(t=>t.classList.add('active'));
   if(tab==='spreads')renderSpreads();
   if(tab==='injuries')renderInjuries();
+  if(tab==='aipicks')renderAISchedule();
   if(tab==='tracker'){renderBetHistory();renderTrackerStats();}
 }
 
