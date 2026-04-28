@@ -1271,13 +1271,20 @@ function valueTag(p,plat){
 }
 
 // =================== PRIZEPICKS LIVE API ===================
+// =================== FETCH HELPER ===================
+function fetchWithTimeout(url,opts={},timeout=6000){
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(),timeout);
+  return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>clearTimeout(t));
+}
+
 async function fetchPP(){
   const lid=PP_LEAGUES[sport];if(!lid)return;
   const st=myState||'TX';
   const url=`${PP_API}?league_id=${lid}&per_page=250&state_abbr=${st}`;
   let data=null;
-  try{const r=await fetch(url,{headers:{'Content-Type':'application/json'}});if(r.ok)data=await r.json();}catch(e){}
-  if(!data){try{const r=await fetch(`${CORS}${encodeURIComponent(url)}`);if(r.ok)data=await r.json();}catch(e){}}
+  try{const r=await fetchWithTimeout(url,{headers:{'Content-Type':'application/json'}},5000);if(r.ok)data=await r.json();}catch(e){}
+  if(!data){try{const r=await fetchWithTimeout(`${CORS}${encodeURIComponent(url)}`,{},7000);if(r.ok)data=await r.json();}catch(e){}}
   if(!data?.data){updatePPStatus(false,0);return;}
   ppLines={};
   const players={};
@@ -1318,7 +1325,7 @@ async function fetchOdds(){
   const to=`${nextDay}T11:59:59Z`; // through late night US time next day
   const url=`${ODDS_API}/${sk}/odds/?apiKey=${oddsKey}&regions=us&markets=spreads,totals,h2h&oddsFormat=american&bookmakers=fanduel,draftkings,betmgm&commenceTimeFrom=${from}&commenceTimeTo=${to}`;
   try{
-    const r=await fetch(url);
+    const r=await fetchWithTimeout(url,{},7000);
     if(!r.ok){updateOddsStatus(false);return;}
     const rem=r.headers.get('x-requests-remaining');
     if(rem!==null)oddsRemaining=rem;
@@ -1527,34 +1534,33 @@ async function fetchPlayerProps(){
     sport==='MLB'?'batter_hits,pitcher_strikeouts,batter_rbis':
     'player_points_scored,player_goals,player_assists,goaltender_saves';
   bookProps={};
+  // Run all event prop fetches in parallel — was sequential, biggest bottleneck
+  const results=await Promise.allSettled(events.filter(g=>g.id).map(async game=>{
+    const url=`https://api.the-odds-api.com/v4/sports/${sportKey}/events/${game.id}/odds?apiKey=${oddsKey}&regions=us&markets=${markets}&oddsFormat=american&bookmakers=fanduel,draftkings`;
+    const r=await fetchWithTimeout(url,{},7000);
+    if(!r.ok)throw new Error('bad response');
+    const rem=r.headers.get('x-requests-remaining');if(rem!==null)oddsRemaining=rem;
+    return r.json();
+  }));
   let loaded=0;
-  for(const game of events){
-    if(!game.id)continue;
-    try{
-      const url=`https://api.the-odds-api.com/v4/sports/${sportKey}/events/${game.id}/odds?apiKey=${oddsKey}&regions=us&markets=${markets}&oddsFormat=american&bookmakers=fanduel,draftkings`;
-      const r=await fetch(url);
-      if(!r.ok)continue;
-      const rem=r.headers.get('x-requests-remaining');if(rem!==null)oddsRemaining=rem;
-      const d=await r.json();
-      const bkArr=d.bookmakers||[];
-      // Flatten all player props into bookProps
-      bkArr.forEach(bk=>{
-        (bk.markets||[]).forEach(mkt=>{
-          (mkt.outcomes||[]).forEach(o=>{
-            if(!o.description)return;// player name is in description
-            const name=o.description.toLowerCase().trim();
-            const stat=propMarketToStat(mkt.key);if(!stat)return;
-            const isOver=o.name==='Over';if(!isOver)return;
-            if(!bookProps[name])bookProps[name]={};
-            if(!bookProps[name][stat]||Math.abs(o.point)<Math.abs(bookProps[name][stat].line||999)){
-              bookProps[name][stat]={line:o.point,odds:o.price,book:bk.title};
-            }
-          });
+  results.forEach(res=>{
+    if(res.status!=='fulfilled')return;
+    loaded++;
+    (res.value.bookmakers||[]).forEach(bk=>{
+      (bk.markets||[]).forEach(mkt=>{
+        (mkt.outcomes||[]).forEach(o=>{
+          if(!o.description)return;
+          const name=o.description.toLowerCase().trim();
+          const stat=propMarketToStat(mkt.key);if(!stat)return;
+          if(o.name!=='Over')return;
+          if(!bookProps[name])bookProps[name]={};
+          if(!bookProps[name][stat]||Math.abs(o.point)<Math.abs(bookProps[name][stat].line||999)){
+            bookProps[name][stat]={line:o.point,odds:o.price,book:bk.title};
+          }
         });
       });
-      loaded++;
-    }catch(e){}
-  }
+    });
+  });
   propsLive=loaded>0;
   const propsBadge=document.getElementById('props-badge');
   if(propsBadge){propsBadge.className=`dbadge ${propsLive?'db-live':'db-off'}`;propsBadge.textContent=propsLive?`PROPS: ${Object.keys(bookProps).length}`:'PROPS: N/A';}
@@ -2069,53 +2075,60 @@ function matchupPick(playerId,stat,direction,playerName,statLabel,line){
 }
 
 // =================== INTELLIGENCE ENGINE ===================
+async function fetchBDLGames(){
+  if(sport!=='NBA')return;
+  const dateStr=getSelectedDate();
+  const r=await fetchWithTimeout(`${BDL}/nba/v1/games?dates[]=${dateStr}&per_page=30`,{headers:{Authorization:BDL_KEY}},6000);
+  const d=await r.json();todayGames=d.data||[];
+  const tp={};todayGames.forEach(g=>{const h=g.home_team,a=g.visitor_team;if(h)tp[h.full_name]={oppAbbr:a?.abbreviation,home:true};if(a)tp[a.full_name]={oppAbbr:h?.abbreviation,home:false};});
+  teamsOn=tp;
+}
+async function fetchBDLInjuries(){
+  if(sport!=='NBA')return;
+  const r=await fetchWithTimeout(`${BDL}/nba/v1/player_injuries?per_page=100`,{headers:{Authorization:BDL_KEY}},6000);
+  const d=await r.json();
+  (d.data||[]).forEach(i=>{if(i.player?.id)injuries[i.player.id]={status:i.status,desc:i.return_date_note||''};});
+}
+
 async function runEngine(){
   const overlay=document.getElementById('intel-overlay'),pfill=document.getElementById('intel-pfill'),logs=document.getElementById('intel-logs'),msg=document.getElementById('intel-msg');
   const hideOverlay=()=>{if(overlay)overlay.classList.add('hidden');};
-  // Hard fallback — hide overlay after 8 seconds no matter what
-  const fallbackTimer=setTimeout(hideOverlay,8000);
+  // Overlay only on first run; subsequent refreshes don't block UI
   if(!engineRan&&overlay)overlay.classList.remove('hidden');
+  // Hard cap: no matter what, overlay hides after 4s
+  const fallbackTimer=setTimeout(hideOverlay,4000);
   const btn=document.getElementById('refresh-btn');if(btn){btn.disabled=true;btn.textContent='... SYNCING';}
   const ll=[],log=t=>{ll.push(t);if(logs)logs.innerHTML=ll.slice(-4).join('<br>');};
   const sp=(p,t)=>{if(pfill)pfill.style.width=p+'%';if(msg&&t)msg.textContent=t;};
-  try{
-    sp(5,'Connecting to PrizePicks');log('→ Fetching live PP projections...');
-    await fetchPP();log(ppLive?`✓ PP: ${ppCount} lines live`:'! PP: using estimated lines');
-    sp(20,'Loading Odds API');log('→ Checking odds key...');
-    await fetchOdds();log(oddsLive?`✓ Odds API: ${oddsData.length} games`:`! Odds API: ${oddsKey?'error':'no key — add in ⚙'}`);
-    sp(40,'Pulling games');log(`→ BDL: fetching ${getDateLabel()} games...`);
-    try{
-      const dateStr=getSelectedDate();
-      const r=await fetch(`${BDL}/nba/v1/games?dates[]=${dateStr}&per_page=30`,{headers:{Authorization:BDL_KEY}});
-      const d=await r.json();todayGames=d.data||[];
-      log(`✓ ${todayGames.length} NBA games for ${getDateLabel()}`);
-      const tp={};todayGames.forEach(g=>{const h=g.home_team,a=g.visitor_team;if(h)tp[h.full_name]={oppAbbr:a?.abbreviation,home:true};if(a)tp[a.full_name]={oppAbbr:h?.abbreviation,home:false};});
-      teamsOn=tp;
-    }catch(e){log('! BDL: game data unavailable');}
-    sp(65,'Building game scripts');log('→ V7: Computing game scripts...');
-    buildGameScripts();log(`✓ Game scripts: ${Object.keys(gameScripts).length} teams`);
-    sp(75,'Fetching player props');log('→ V7: Loading book prop lines...');
-    await fetchPlayerProps();
-    log(propsLive?`✓ Book props: ${Object.keys(bookProps).length} players`:'! Book props: needs Odds API key');
-    sp(85,'Loading injuries');log('→ Checking injury report...');
-    try{const r=await fetch(`${BDL}/nba/v1/player_injuries?per_page=100`,{headers:{Authorization:BDL_KEY}});const d=await r.json();(d.data||[]).forEach(i=>{if(i.player?.id)injuries[i.player.id]={status:i.status,desc:i.return_date_note||''};});log(`✓ ${Object.keys(injuries).length} injuries tracked`);}catch(e){log('! Injury data unavailable');}
-    sp(90,'Computing edges');log('→ Analyzing matchups + lines...');
-    await new Promise(r=>setTimeout(r,400));
-    sp(100,'Intelligence ready');log('✓ PropOS v7 intelligence active');
-    document.getElementById('i-games').textContent=todayGames.length||SCHEDULE[sport]?.length||0;
-    document.getElementById('stxt').textContent=ppLive||oddsLive?'Live':'Ready';
-    engineRan=true;
-    clearTimeout(fallbackTimer);
-    setTimeout(hideOverlay,500);
-    renderGames();renderPlayers();renderSpreads();renderInjuries();renderParlay();renderAISchedule();
-  }catch(e){
-    clearTimeout(fallbackTimer);
-    log('✗ Error: '+e.message);
-    console.error('runEngine error:',e);
-    setTimeout(hideOverlay,1200);
-    try{renderGames();}catch(e2){}
-    try{renderPlayers();}catch(e2){}
-  }
+
+  sp(10,'Fanning out parallel fetches');
+  log('→ PP, Odds, BDL games, injuries — all parallel');
+
+  // Fire all 4 independent fetches at once
+  const ppP=fetchPP().then(()=>{log(ppLive?`✓ PP: ${ppCount} lines live`:'! PP: using estimated lines');renderPlayers();sp(40,'PP loaded');}).catch(e=>log('✗ PP: '+e.message));
+  const oddsP=fetchOdds().then(()=>{log(oddsLive?`✓ Odds: ${oddsData.length} games`:`! Odds: ${oddsKey?'error':'no key'}`);sp(50,'Odds loaded');}).catch(e=>log('✗ Odds: '+e.message));
+  const gamesP=fetchBDLGames().then(()=>{log(`✓ ${todayGames.length} NBA games for ${getDateLabel()}`);renderGames();renderAISchedule();sp(60,'Games loaded');hideOverlay();}).catch(e=>log('! BDL games: '+e.message));
+  const injP=fetchBDLInjuries().then(()=>{log(`✓ ${Object.keys(injuries).length} injuries tracked`);renderInjuries();}).catch(e=>log('! Injuries: '+e.message));
+
+  // Wait for the schedule + odds to settle before computing scripts and props (which depend on them)
+  await Promise.allSettled([gamesP,oddsP]);
+  sp(70,'Building game scripts');
+  buildGameScripts();log(`✓ Game scripts: ${Object.keys(gameScripts).length} teams`);
+  renderGames();renderAISchedule();
+
+  // Player props depend on oddsData being loaded — fire now, don't block UI
+  const propsP=fetchPlayerProps().then(()=>{log(propsLive?`✓ Book props: ${Object.keys(bookProps).length} players`:'! Book props: needs Odds API key');renderPlayers();sp(95,'Edges computed');}).catch(e=>log('! Props: '+e.message));
+
+  // Wait for everything else to settle (with cap), but don't block too long
+  await Promise.allSettled([ppP,injP,propsP]);
+
+  sp(100,'Intelligence ready');log('✓ PropOS v7 intelligence active');
+  document.getElementById('i-games').textContent=todayGames.length||SCHEDULE[sport]?.length||0;
+  document.getElementById('stxt').textContent=ppLive||oddsLive?'Live':'Ready';
+  engineRan=true;
+  clearTimeout(fallbackTimer);
+  hideOverlay();
+  renderGames();renderPlayers();renderSpreads();renderInjuries();renderParlay();renderAISchedule();
   if(btn){btn.disabled=false;btn.textContent='↻ REFRESH';}
 }
 
