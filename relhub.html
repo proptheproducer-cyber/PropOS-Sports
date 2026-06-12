@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#080812">
+<title>RelHub</title>
+<style>
+  :root{
+    --bg:#080812;
+    --surface:#11111c;
+    --surface-2:#161624;
+    --surface-3:#1c1c2c;
+    --brand:#a78bfa;
+    --brand-dim:#7c6bd4;
+    --text:#ececf5;
+    --muted:#8a8aa0;
+    --muted-2:#5d5d72;
+    --border:rgba(167,139,250,.12);
+    --border-strong:rgba(167,139,250,.28);
+    --green:#34d399;
+    --yellow:#fbbf24;
+    --red:#f87171;
+    --shadow:0 10px 30px rgba(0,0,0,.45);
+    --safe-top:env(safe-area-inset-top,0px);
+    --safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px;
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:contain;
+  }
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+  textarea,input,select{font-family:inherit;}
+
+  /* ---------- App shell ---------- */
+  .app{
+    max-width:560px;
+    margin:0 auto;
+    min-height:100%;
+    display:flex;
+    flex-direction:column;
+    background:
+      radial-gradient(1200px 400px at 50% -10%, rgba(167,139,250,.08), transparent 60%),
+      var(--bg);
+  }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    position:sticky;top:0;z-index:30;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:calc(var(--safe-top) + 14px) 16px 14px;
+    background:rgba(8,8,18,.82);
+    backdrop-filter:saturate(150%) blur(14px);
+    -webkit-backdrop-filter:saturate(150%) blur(14px);
+    border-bottom:1px solid var(--border);
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:19px;letter-spacing:.2px;}
+  .brand .dot{
+    width:26px;height:26px;border-radius:8px;
+    background:linear-gradient(135deg,var(--brand),#6d5ad0);
+    display:grid;place-items:center;color:#0c0a1a;font-weight:800;font-size:15px;
+    box-shadow:0 4px 14px rgba(167,139,250,.4);
+  }
+  .tools{display:flex;align-items:center;gap:9px;}
+  .icon-btn{
+    width:40px;height:40px;border-radius:12px;
+    display:grid;place-items:center;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--text);transition:.15s;
+  }
+  .icon-btn:active{transform:scale(.92);}
+  .icon-btn.brand-btn{
+    background:linear-gradient(135deg,rgba(167,139,250,.22),rgba(167,139,250,.08));
+    border-color:var(--border-strong);color:var(--brand);
+  }
+  .icon-btn svg{width:20px;height:20px;}
+
+  /* ---------- List ---------- */
+  .list{
+    flex:1;
+    padding:14px 14px calc(96px + var(--safe-bottom));
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .empty{
+    text-align:center;color:var(--muted);
+    padding:60px 24px;font-size:14px;
+  }
+
+  /* ---------- Card ---------- */
+  .card{
+    width:100%;
+    background:linear-gradient(180deg,var(--surface),var(--surface-2));
+    border:1px solid var(--border);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+    transition:border-color .2s;
+  }
+  .card.open{border-color:var(--border-strong);}
+  .card-head{
+    display:flex;align-items:center;gap:14px;
+    padding:14px 15px;
+    width:100%;text-align:left;
+  }
+  .avatar-ring{
+    position:relative;flex:0 0 auto;
+    width:54px;height:54px;border-radius:50%;
+    display:grid;place-items:center;
+    padding:3px;
+  }
+  .avatar-ring::before{
+    content:"";position:absolute;inset:0;border-radius:50%;
+    padding:3px;
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+  }
+  .avatar-ring.green::before{background:conic-gradient(var(--green),#0fae7e);}
+  .avatar-ring.yellow::before{background:conic-gradient(var(--yellow),#d98c0a);}
+  .avatar-ring.red::before{background:conic-gradient(var(--red),#d83b3b);}
+  .avatar{
+    width:100%;height:100%;border-radius:50%;
+    display:grid;place-items:center;
+    font-weight:700;font-size:18px;color:#0c0a16;
+    letter-spacing:.5px;
+  }
+  .head-main{flex:1;min-width:0;}
+  .name-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .name{font-weight:650;font-size:16px;letter-spacing:.2px;}
+  .badge{
+    font-size:11px;font-weight:600;
+    padding:3px 8px;border-radius:999px;
+    background:rgba(167,139,250,.14);
+    color:var(--brand);
+    border:1px solid var(--border);
+    white-space:nowrap;
+  }
+  .sub{
+    margin-top:3px;display:flex;align-items:center;gap:8px;
+    font-size:12.5px;color:var(--muted);
+  }
+  .status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+  .status-dot.green{background:var(--green);}
+  .status-dot.yellow{background:var(--yellow);}
+  .status-dot.red{background:var(--red);}
+  .chev{
+    flex:0 0 auto;color:var(--muted-2);transition:transform .25s;
+  }
+  .card.open .chev{transform:rotate(180deg);color:var(--brand);}
+
+  /* ---------- Expanded body ---------- */
+  .body{
+    display:grid;grid-template-rows:0fr;
+    transition:grid-template-rows .28s ease;
+  }
+  .card.open .body{grid-template-rows:1fr;}
+  .body-inner{overflow:hidden;}
+  .body-pad{padding:2px 15px 16px;display:flex;flex-direction:column;gap:16px;}
+  .divider{height:1px;background:var(--border);margin:0 -15px;}
+
+  .section-label{
+    font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px;
+  }
+  .section-label .ai-spark{color:var(--brand);}
+
+  .ai-box{
+    background:
+      linear-gradient(180deg,rgba(167,139,250,.10),rgba(167,139,250,.03));
+    border:1px solid var(--border-strong);
+    border-radius:14px;padding:13px 13px 11px;
+  }
+  .ai-text{
+    font-size:14px;color:var(--text);line-height:1.5;
+    width:100%;background:transparent;border:none;resize:none;
+    min-height:62px;padding:0;outline:none;
+  }
+  .ai-text[readonly]{cursor:default;}
+  .ai-actions{display:flex;gap:8px;margin-top:10px;}
+  .pill-btn{
+    flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+    padding:9px 8px;border-radius:10px;
+    background:var(--surface-3);border:1px solid var(--border);
+    color:var(--text);font-size:13px;font-weight:600;transition:.15s;
+  }
+  .pill-btn:active{transform:scale(.96);}
+  .pill-btn.primary{background:var(--brand);color:#120c22;border-color:transparent;}
+  .pill-btn svg{width:15px;height:15px;}
+
+  .log-area{
+    width:100%;min-height:64px;resize:vertical;
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:11px 12px;color:var(--text);
+    font-size:14px;outline:none;
+  }
+  .log-area:focus{border-color:var(--border-strong);}
+  .log-row{display:flex;gap:8px;margin-top:8px;}
+  .save-btn{
+    flex:0 0 auto;padding:9px 18px;border-radius:10px;
+    background:var(--brand);color:#120c22;font-weight:700;font-size:13px;transition:.15s;
+  }
+  .save-btn:active{transform:scale(.96);}
+
+  .history{display:flex;flex-direction:column;gap:9px;}
+  .hist-item{
+    display:flex;gap:10px;font-size:13.5px;
+  }
+  .hist-rail{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;}
+  .hist-rail .knob{width:8px;height:8px;border-radius:50%;background:var(--brand);margin-top:5px;}
+  .hist-rail .line{flex:1;width:2px;background:var(--border);margin-top:3px;}
+  .hist-body{padding-bottom:2px;}
+  .hist-date{font-size:11.5px;color:var(--muted-2);margin-bottom:1px;}
+  .hist-note{color:var(--text);}
+  .hist-empty{font-size:13px;color:var(--muted-2);font-style:italic;}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12.5px;font-weight:600;
+    padding:6px 11px;border-radius:999px;
+    background:rgba(167,139,250,.10);
+    border:1px solid var(--border);color:var(--brand);
+  }
+  .chip svg{width:13px;height:13px;}
+
+  /* ---------- Bottom nav ---------- */
+  .bottom-nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;
+    max-width:560px;margin:0 auto;
+    display:flex;
+    padding:8px 8px calc(8px + var(--safe-bottom));
+    gap:4px;
+    background:rgba(8,8,18,.9);
+    backdrop-filter:saturate(150%) blur(16px);
+    -webkit-backdrop-filter:saturate(150%) blur(16px);
+    border-top:1px solid var(--border);
+  }
+  .nav-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:7px 4px 6px;border-radius:12px;
+    color:var(--muted);font-size:11px;font-weight:600;transition:.15s;
+  }
+  .nav-btn .count{
+    font-size:10px;font-weight:700;min-width:18px;text-align:center;
+    padding:1px 5px;border-radius:999px;background:var(--surface-3);color:var(--muted);
+  }
+  .nav-btn.active{color:var(--brand);background:rgba(167,139,250,.12);}
+  .nav-btn.active .count{background:var(--brand);color:#120c22;}
+  .nav-btn .label{letter-spacing:.2px;}
+
+  /* ---------- Modal / sheet ---------- */
+  .overlay{
+    position:fixed;inset:0;z-index:50;
+    background:rgba(4,4,10,.6);
+    backdrop-filter:blur(3px);
+    display:flex;align-items:flex-end;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .22s;
+  }
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .sheet{
+    width:100%;max-width:560px;
+    background:var(--surface-2);
+    border-top-left-radius:24px;border-top-right-radius:24px;
+    border:1px solid var(--border);border-bottom:none;
+    padding:10px 18px calc(22px + var(--safe-bottom));
+    transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.9,.3,1);
+    max-height:90vh;overflow-y:auto;
+  }
+  .overlay.show .sheet{transform:translateY(0);}
+  .grab{width:38px;height:4px;border-radius:999px;background:var(--muted-2);margin:6px auto 16px;}
+  .sheet h2{margin:0 0 18px;font-size:18px;font-weight:700;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;letter-spacing:.3px;}
+  .field input,.field select{
+    width:100%;padding:12px 13px;border-radius:12px;
+    background:var(--surface);border:1px solid var(--border);
+    color:var(--text);font-size:15px;outline:none;
+  }
+  .field input:focus,.field select:focus{border-color:var(--border-strong);}
+  .field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%238a8aa0' stroke-width='2'%3E%3Cpath d='M3 5l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;}
+  .sheet-actions{display:flex;gap:10px;margin-top:6px;}
+  .sheet-actions .ghost{flex:1;padding:13px;border-radius:12px;background:var(--surface-3);border:1px solid var(--border);color:var(--text);font-weight:600;}
+  .sheet-actions .confirm{flex:1.4;padding:13px;border-radius:12px;background:var(--brand);color:#120c22;font-weight:700;}
+  .sheet-actions button:active{transform:scale(.97);}
+
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:calc(92px + var(--safe-bottom));
+    transform:translateX(-50%) translateY(20px);
+    background:var(--surface-3);border:1px solid var(--border-strong);
+    color:var(--text);padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;
+    box-shadow:var(--shadow);z-index:60;opacity:0;pointer-events:none;transition:.25s;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Toolbar -->
+  <header class="toolbar">
+    <div class="brand"><span class="dot">R</span>RelHub</div>
+    <div class="tools">
+      <button class="icon-btn" id="addBtn" aria-label="Add contact">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="icon-btn brand-btn" id="galaxyBtn" aria-label="Open Galaxy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6c4 3 4 15.8 0 18.8M12 2.6c-4 3-4 15.8 0 18.8M3 9c4.5 2.4 13.5 2.4 18 0M3 15c4.5-2.4 13.5-2.4 18 0"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Card list -->
+  <main class="list" id="list"></main>
+</div>
+
+<!-- Bottom nav -->
+<nav class="bottom-nav" id="nav">
+  <button class="nav-btn active" data-filter="all"><span class="count" data-count="all">0</span><span class="label">All</span></button>
+  <button class="nav-btn" data-filter="red"><span class="count" data-count="red">0</span><span class="label">Overdue</span></button>
+  <button class="nav-btn" data-filter="yellow"><span class="count" data-count="yellow">0</span><span class="label">Due Soon</span></button>
+  <button class="nav-btn" data-filter="green"><span class="count" data-count="green">0</span><span class="label">On Track</span></button>
+</nav>
+
+<!-- Add contact sheet -->
+<div class="overlay" id="overlay">
+  <div class="sheet" id="sheet">
+    <div class="grab"></div>
+    <h2>New contact</h2>
+    <div class="field">
+      <label for="f-name">Name</label>
+      <input id="f-name" type="text" placeholder="e.g. Gerald Keys" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="f-rel">Relationship / role</label>
+      <input id="f-rel" type="text" placeholder="e.g. Business partner" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="f-org">Organization / context</label>
+      <input id="f-org" type="text" placeholder="e.g. Prompt Haus" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="f-freq">Contact frequency</label>
+      <select id="f-freq">
+        <option value="weekly">Weekly</option>
+        <option value="biweekly" selected>Bi-weekly</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="f-proj">Linked Galaxy project (optional)</label>
+      <input id="f-proj" type="text" placeholder="e.g. Prompt Haus" autocomplete="off">
+    </div>
+    <div class="sheet-actions">
+      <button class="ghost" id="cancelBtn">Cancel</button>
+      <button class="confirm" id="saveContactBtn">Add contact</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var STORE_KEY = "relhub.contacts.v1";
+  var GALAXY_URL = "http://165.227.197.92:8080/prime/?v=2";
+  var FREQ_DAYS = { weekly:7, biweekly:14 };
+  var DAY = 86400000;
+
+  var AVATAR_COLORS = ["#a78bfa","#f472b6","#38bdf8","#fbbf24","#34d399","#fb923c","#818cf8","#f87171"];
+
+  // ---------- Seed data (only when storage empty) ----------
+  function isoDaysAgo(n){
+    var d = new Date();
+    d.setHours(12,0,0,0);
+    d.setTime(d.getTime() - n*DAY);
+    return d.toISOString().slice(0,10);
+  }
+  function seed(){
+    return [
+      { id:uid(), name:"Gerald Keys", relationship:"Producer & business partner", org:"Prompt Haus",
+        frequency:"biweekly", lastContact:isoDaysAgo(6), avatarColor:"#a78bfa",
+        galaxyProjects:["Prompt Haus"], history:[
+          {date:isoDaysAgo(6), note:"Synced on the next Prompt Haus drop and revenue split."}
+        ]},
+      { id:uid(), name:"J Ross Parrelli", relationship:"BLL partner", org:"BLL",
+        frequency:"weekly", lastContact:isoDaysAgo(8), avatarColor:"#38bdf8",
+        galaxyProjects:["BLL"], history:[
+          {date:isoDaysAgo(8), note:"Reviewed BLL roadmap and partnership terms."}
+        ]},
+      { id:uid(), name:"Hayon & Angel", relationship:"Edutainment Pros founders", org:"Young Moguls",
+        frequency:"biweekly", lastContact:isoDaysAgo(13), avatarColor:"#f472b6",
+        galaxyProjects:["Young Moguls"], history:[
+          {date:isoDaysAgo(13), note:"Talked Young Moguls curriculum and launch timing."}
+        ]},
+      { id:uid(), name:"Jesse Delgado", relationship:"AI Collective Sacramento", org:"AI music event",
+        frequency:"biweekly", lastContact:isoDaysAgo(24), avatarColor:"#34d399",
+        galaxyProjects:["AI Music Event"], history:[
+          {date:isoDaysAgo(24), note:"Locked venue ideas for the AI music event."}
+        ]},
+      { id:uid(), name:"Aaron Le", relationship:"Artist", org:"New album",
+        frequency:"weekly", lastContact:isoDaysAgo(15), avatarColor:"#fb923c",
+        galaxyProjects:["New Album"], history:[
+          {date:isoDaysAgo(15), note:"Heard the new album rough mixes — fire."}
+        ]}
+    ];
+  }
+
+  // ---------- State ----------
+  var contacts = load();
+  var filter = "all";
+  var openId = null;
+  var editingAiId = null;          // contact id whose AI box is in edit mode
+  var aiCounter = {};              // id -> refresh counter
+
+  // ---------- Persistence ----------
+  function uid(){ return "c" + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-3); }
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      if(raw){ var p = JSON.parse(raw); if(Array.isArray(p)) return p; }
+    }catch(e){}
+    var s = seed();
+    save(s);
+    return s;
+  }
+  function save(arr){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(arr||contacts)); }catch(e){}
+  }
+
+  // ---------- Urgency ----------
+  function daysSince(iso){
+    var then = new Date(iso+"T12:00:00").getTime();
+    var now = new Date(); now.setHours(12,0,0,0);
+    return Math.floor((now.getTime()-then)/DAY);
+  }
+  function urgency(c){
+    var freq = FREQ_DAYS[c.frequency] || 14;
+    var ds = daysSince(c.lastContact);
+    if(ds < freq) return "green";
+    if(ds <= freq*1.5) return "yellow";
+    return "red";
+  }
+  var URGENCY_TEXT = { green:"On track", yellow:"Due soon", red:"Overdue" };
+
+  // ---------- Helpers ----------
+  function initials(name){
+    var parts = name.replace(/&/g," ").trim().split(/\s+/).filter(Boolean);
+    if(parts.length===1) return parts[0].slice(0,2).toUpperCase();
+    return (parts[0][0]+parts[parts.length-1][0]).toUpperCase();
+  }
+  function relativeDate(iso){
+    var ds = daysSince(iso);
+    if(ds<=0) return "Today";
+    if(ds===1) return "Yesterday";
+    if(ds<7) return ds+"d ago";
+    if(ds<30) return Math.floor(ds/7)+"w ago";
+    return Math.floor(ds/30)+"mo ago";
+  }
+  function prettyDate(iso){
+    var d = new Date(iso+"T12:00:00");
+    return d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"});
+  }
+  function esc(s){
+    return String(s||"").replace(/[&<>"']/g,function(ch){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch];
+    });
+  }
+
+  // ---------- AI follow-up generator (local, no network) ----------
+  var TEMPLATES = {
+    red:[
+      "Hey {first}, it's been too long — I don't want {org} to lose momentum. Free for a quick call this week to reconnect?",
+      "{first}! Owe you a check-in. How are things with {org}? Let's grab 20 minutes and pick up where we left off.",
+      "Been thinking about {org}, {first}. Sorry for the radio silence — what does your week look like for a catch-up?",
+      "{first}, flagging this to myself: we're overdue. Genuinely want to hear how {org} is going. Coffee or a call soon?"
+    ],
+    yellow:[
+      "Hey {first}, checking in on {org} — anything I can help move forward this week?",
+      "{first}! Good time for a quick sync on {org}? Want to keep us aligned before too much time passes.",
+      "Wanted to keep the thread warm, {first}. How's {org} tracking on your end?",
+      "{first}, got a few ideas for {org} I'd love to run by you. Free for a short call?"
+    ],
+    green:[
+      "Hey {first}, great momentum on {org} lately — just keeping the line open. Anything new on your side?",
+      "{first}! Quick note to stay in sync on {org}. All good, or anything you want to talk through?",
+      "Appreciating the energy on {org}, {first}. Let me know if there's anything you need from me.",
+      "{first}, riding the wave on {org} — happy to jump on a call whenever something comes up."
+    ]
+  };
+  function firstName(name){ return name.replace(/&.*$/,"").trim().split(/\s+/)[0]; }
+  function aiSuggestion(c){
+    var u = urgency(c);
+    var bank = TEMPLATES[u];
+    var n = aiCounter[c.id] || 0;
+    var tpl = bank[n % bank.length];
+    return tpl.replace(/{first}/g, firstName(c.name)).replace(/{org}/g, c.org || "things");
+  }
+
+  // ---------- Rendering ----------
+  var listEl = document.getElementById("list");
+
+  function counts(){
+    var r={all:contacts.length,red:0,yellow:0,green:0};
+    contacts.forEach(function(c){ r[urgency(c)]++; });
+    return r;
+  }
+  function updateCounts(){
+    var c = counts();
+    document.querySelectorAll("[data-count]").forEach(function(el){
+      el.textContent = c[el.getAttribute("data-count")];
+    });
+  }
+
+  function visible(){
+    if(filter==="all") return contacts.slice();
+    return contacts.filter(function(c){ return urgency(c)===filter; });
+  }
+
+  function render(){
+    updateCounts();
+    var rows = visible();
+    if(!rows.length){
+      listEl.innerHTML = '<div class="empty">No contacts in this view.<br>Tap + to add one.</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(cardHTML).join("");
+    bindCards();
+  }
+
+  function cardHTML(c){
+    var u = urgency(c);
+    var open = c.id===openId;
+    var hist = (c.history||[]).slice().sort(function(a,b){ return b.date<a.date?-1:1; });
+    var histHTML = hist.length ? hist.map(function(h,i){
+      var last = i===hist.length-1;
+      return '<div class="hist-item">'+
+               '<div class="hist-rail"><span class="knob"></span>'+(last?"":'<span class="line"></span>')+'</div>'+
+               '<div class="hist-body"><div class="hist-date">'+prettyDate(h.date)+'</div>'+
+               '<div class="hist-note">'+esc(h.note)+'</div></div>'+
+             '</div>';
+    }).join("") : '<div class="hist-empty">No interactions logged yet.</div>';
+
+    var projHTML = (c.galaxyProjects&&c.galaxyProjects.length)
+      ? '<div class="chips">'+c.galaxyProjects.map(function(p){
+          return '<span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2.6"/><path d="M12 3.4c3.2 2.4 3.2 14.8 0 17.2M3.6 9c3.6 1.9 13.2 1.9 16.8 0"/></svg>'+esc(p)+'</span>';
+        }).join("")+'</div>'
+      : '<div class="hist-empty">No linked projects.</div>';
+
+    var aiEditing = c.id===editingAiId;
+
+    return ''+
+    '<div class="card'+(open?" open":"")+'" data-id="'+c.id+'">'+
+      '<button class="card-head" data-act="toggle">'+
+        '<span class="avatar-ring '+u+'"><span class="avatar" style="background:'+(c.avatarColor||"#a78bfa")+'">'+initials(c.name)+'</span></span>'+
+        '<span class="head-main">'+
+          '<span class="name-row"><span class="name">'+esc(c.name)+'</span><span class="badge">'+esc(c.relationship)+'</span></span>'+
+          '<span class="sub"><span class="status-dot '+u+'"></span>'+URGENCY_TEXT[u]+' · last contact '+relativeDate(c.lastContact)+'</span>'+
+        '</span>'+
+        '<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>'+
+      '</button>'+
+      '<div class="body"><div class="body-inner"><div class="body-pad">'+
+
+        '<div class="divider"></div>'+
+        '<div>'+
+          '<div class="section-label"><span class="ai-spark">✦</span> AI suggested follow-up</div>'+
+          '<div class="ai-box">'+
+            '<textarea class="ai-text" data-ai="'+c.id+'" '+(aiEditing?"":"readonly")+' rows="3">'+esc(aiSuggestion(c))+'</textarea>'+
+            '<div class="ai-actions">'+
+              '<button class="pill-btn" data-act="copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>Copy</button>'+
+              '<button class="pill-btn'+(aiEditing?" primary":"")+'" data-act="edit">'+(aiEditing
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12l5 5L20 6"/></svg>Done'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>Edit')+'</button>'+
+              '<button class="pill-btn" data-act="refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 11a8 8 0 10-1.6 5M20 5v6h-6"/></svg>Refresh</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+
+        '<div>'+
+          '<div class="section-label">Log interaction</div>'+
+          '<textarea class="log-area" data-log="'+c.id+'" placeholder="What did you talk about?"></textarea>'+
+          '<div class="log-row"><button class="save-btn" data-act="savelog">Save</button></div>'+
+        '</div>'+
+
+        '<div>'+
+          '<div class="section-label">Interaction history</div>'+
+          '<div class="history">'+histHTML+'</div>'+
+        '</div>'+
+
+        '<div>'+
+          '<div class="section-label">Linked Galaxy projects</div>'+
+          projHTML+
+        '</div>'+
+
+      '</div></div></div>'+
+    '</div>';
+  }
+
+  function findCard(el){
+    while(el && !el.classList.contains("card")) el = el.parentElement;
+    return el;
+  }
+  function contactById(id){
+    for(var i=0;i<contacts.length;i++) if(contacts[i].id===id) return contacts[i];
+    return null;
+  }
+
+  function bindCards(){
+    listEl.querySelectorAll(".card").forEach(function(card){
+      var id = card.getAttribute("data-id");
+      card.addEventListener("click", function(e){
+        var btn = e.target.closest("[data-act]");
+        if(!btn) return;
+        var act = btn.getAttribute("data-act");
+        var c = contactById(id);
+        if(!c) return;
+
+        if(act==="toggle"){
+          openId = (openId===id)? null : id;
+          editingAiId = null;
+          render();
+          return;
+        }
+        if(act==="copy"){
+          var ta = card.querySelector('[data-ai="'+id+'"]');
+          copyText(ta ? ta.value : aiSuggestion(c));
+          toast("Copied to clipboard");
+          return;
+        }
+        if(act==="edit"){
+          var taE = card.querySelector('[data-ai="'+id+'"]');
+          if(editingAiId===id){
+            editingAiId = null;            // done editing
+            toast("Message saved");
+          }else{
+            editingAiId = id;
+          }
+          render();
+          if(editingAiId===id){
+            var nt = listEl.querySelector('[data-ai="'+id+'"]');
+            if(nt){ nt.focus(); nt.setSelectionRange(nt.value.length, nt.value.length); }
+          }
+          return;
+        }
+        if(act==="refresh"){
+          aiCounter[id] = (aiCounter[id]||0)+1;
+          editingAiId = null;
+          render();
+          return;
+        }
+        if(act==="savelog"){
+          var area = card.querySelector('[data-log="'+id+'"]');
+          var note = area ? area.value.trim() : "";
+          if(!note){ toast("Write something first"); return; }
+          c.history = c.history || [];
+          c.history.push({ date: isoDaysAgo(0), note: note });
+          c.lastContact = isoDaysAgo(0);
+          save();
+          render();
+          toast("Logged · marked on track");
+          return;
+        }
+      });
+    });
+  }
+
+  function copyText(t){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).catch(function(){ legacyCopy(t); });
+    }else{ legacyCopy(t); }
+  }
+  function legacyCopy(t){
+    var ta=document.createElement("textarea");
+    ta.value=t; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); }catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  // ---------- Toast ----------
+  var toastEl = document.getElementById("toast");
+  var toastT;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastT);
+    toastT = setTimeout(function(){ toastEl.classList.remove("show"); }, 1700);
+  }
+
+  // ---------- Bottom nav ----------
+  document.getElementById("nav").addEventListener("click", function(e){
+    var btn = e.target.closest(".nav-btn");
+    if(!btn) return;
+    filter = btn.getAttribute("data-filter");
+    document.querySelectorAll(".nav-btn").forEach(function(b){ b.classList.toggle("active", b===btn); });
+    render();
+  });
+
+  // ---------- Galaxy shortcut (one-way link out) ----------
+  document.getElementById("galaxyBtn").addEventListener("click", function(){
+    window.location.href = GALAXY_URL;
+  });
+
+  // ---------- Add contact sheet ----------
+  var overlay = document.getElementById("overlay");
+  function openSheet(){
+    overlay.classList.add("show");
+    document.getElementById("f-name").value="";
+    document.getElementById("f-rel").value="";
+    document.getElementById("f-org").value="";
+    document.getElementById("f-freq").value="biweekly";
+    document.getElementById("f-proj").value="";
+    setTimeout(function(){ document.getElementById("f-name").focus(); }, 280);
+  }
+  function closeSheet(){ overlay.classList.remove("show"); }
+
+  document.getElementById("addBtn").addEventListener("click", openSheet);
+  document.getElementById("cancelBtn").addEventListener("click", closeSheet);
+  overlay.addEventListener("click", function(e){ if(e.target===overlay) closeSheet(); });
+
+  document.getElementById("saveContactBtn").addEventListener("click", function(){
+    var name = document.getElementById("f-name").value.trim();
+    if(!name){ toast("Name is required"); document.getElementById("f-name").focus(); return; }
+    var rel = document.getElementById("f-rel").value.trim() || "Contact";
+    var org = document.getElementById("f-org").value.trim();
+    var freq = document.getElementById("f-freq").value;
+    var proj = document.getElementById("f-proj").value.trim();
+    var color = AVATAR_COLORS[contacts.length % AVATAR_COLORS.length];
+    var c = {
+      id: uid(), name:name, relationship:rel, org:org,
+      frequency:freq, lastContact:isoDaysAgo(0), avatarColor:color,
+      galaxyProjects: proj ? [proj] : [], history:[]
+    };
+    contacts.unshift(c);
+    save();
+    closeSheet();
+    filter="all";
+    document.querySelectorAll(".nav-btn").forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-filter")==="all"); });
+    openId = c.id;
+    render();
+    toast("Contact added");
+  });
+
+  // ---------- Init ----------
+  render();
+})();
+</script>
+</body>
+</html>
