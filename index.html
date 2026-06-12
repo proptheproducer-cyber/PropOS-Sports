@@ -2074,5 +2074,24 @@ async function init(){
 }
 init();
 </script>
+
+<!-- Cross-app nav: floating button to the Relationship Hub -->
+<style>
+  .relhub-fab{
+    position:fixed;right:16px;bottom:18px;z-index:350;
+    display:inline-flex;align-items:center;gap:7px;
+    padding:11px 16px;border-radius:999px;
+    font-family:'Syne',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;
+    text-transform:uppercase;color:#0a0a0c;cursor:pointer;
+    background:linear-gradient(135deg,var(--gold,#d4af37),#b8860b);
+    border:1px solid rgba(255,255,255,.16);
+    box-shadow:0 8px 22px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.4);
+    -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  }
+  .relhub-fab:active{transform:scale(.94);}
+  @media(max-width:768px){ .relhub-fab{ bottom:74px; } }
+</style>
+<button class="relhub-fab" onclick="location.href='http://165.227.197.92:8080/relhub'">👥 RelHub</button>
+
 </body>
 </html>

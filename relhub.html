@@ -38,6 +38,11 @@
   }
   button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
   textarea,input,select{font-family:inherit;}
+  /* Mobile touch reliability: kill 300ms delay/double-tap-zoom, make delegated taps
+     fire on iOS (needs cursor:pointer), and make icons non-interactive so the tap
+     target is always the button itself (never an inner <svg>/<path>). */
+  button,.nav-btn,.card-head,[data-act],.fab{touch-action:manipulation;cursor:pointer;}
+  svg{pointer-events:none;}
 
   /* ---------- App shell ---------- */
   .app{
@@ -299,6 +304,20 @@
     box-shadow:var(--shadow);z-index:60;opacity:0;pointer-events:none;transition:.25s;
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ---------- Floating Galaxy button (cross-app nav) ---------- */
+  .fab{
+    position:fixed;right:14px;bottom:calc(82px + var(--safe-bottom));z-index:40;
+    display:inline-flex;align-items:center;gap:7px;
+    padding:11px 16px;border-radius:999px;
+    font-size:13.5px;font-weight:700;letter-spacing:.2px;
+    color:#120c22;
+    background:linear-gradient(135deg,var(--brand),#6d5ad0);
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 8px 22px rgba(124,107,212,.45),0 2px 6px rgba(0,0,0,.4);
+    transition:transform .15s;
+  }
+  .fab:active{transform:scale(.94);}
 </style>
 </head>
 <body>
@@ -307,11 +326,8 @@
   <header class="toolbar">
     <div class="brand"><span class="dot">R</span>RelHub</div>
     <div class="tools">
-      <button class="icon-btn" id="addBtn" aria-label="Add contact">
+      <button class="icon-btn brand-btn" id="addBtn" aria-label="Add contact">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
-      <button class="icon-btn brand-btn" id="galaxyBtn" aria-label="Open Galaxy">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6c4 3 4 15.8 0 18.8M12 2.6c-4 3-4 15.8 0 18.8M3 9c4.5 2.4 13.5 2.4 18 0M3 15c4.5-2.4 13.5-2.4 18 0"/></svg>
       </button>
     </div>
   </header>
@@ -319,6 +335,9 @@
   <!-- Card list -->
   <main class="list" id="list"></main>
 </div>
+
+<!-- Floating cross-app nav button -->
+<button class="fab" onclick="location.href='http://165.227.197.92:8080/prime/?v=2'">🌌 Galaxy</button>
 
 <!-- Bottom nav -->
 <nav class="bottom-nav" id="nav">
@@ -531,7 +550,6 @@
       return;
     }
     listEl.innerHTML = rows.map(cardHTML).join("");
-    bindCards();
   }
 
   function cardHTML(c){
@@ -602,72 +620,75 @@
     '</div>';
   }
 
-  function findCard(el){
-    while(el && !el.classList.contains("card")) el = el.parentElement;
-    return el;
+  // Robust ancestor walk — works regardless of tap target (incl. text/SVG nodes),
+  // unlike Element.closest on some older mobile WebKit builds.
+  function closestSel(el, sel){
+    while(el && el.nodeType===1){
+      if(el.matches && el.matches(sel)) return el;
+      el = el.parentNode;
+    }
+    return null;
   }
   function contactById(id){
     for(var i=0;i<contacts.length;i++) if(contacts[i].id===id) return contacts[i];
     return null;
   }
 
-  function bindCards(){
-    listEl.querySelectorAll(".card").forEach(function(card){
-      var id = card.getAttribute("data-id");
-      card.addEventListener("click", function(e){
-        var btn = e.target.closest("[data-act]");
-        if(!btn) return;
-        var act = btn.getAttribute("data-act");
-        var c = contactById(id);
-        if(!c) return;
+  // Single persistent delegated listener on the list (attached once in init()).
+  function onListClick(e){
+    var btn = closestSel(e.target, "[data-act]");
+    if(!btn) return;
+    var card = closestSel(btn, ".card");
+    if(!card) return;
+    var id = card.getAttribute("data-id");
+    var act = btn.getAttribute("data-act");
+    var c = contactById(id);
+    if(!c) return;
 
-        if(act==="toggle"){
-          openId = (openId===id)? null : id;
-          editingAiId = null;
-          render();
-          return;
-        }
-        if(act==="copy"){
-          var ta = card.querySelector('[data-ai="'+id+'"]');
-          copyText(ta ? ta.value : aiSuggestion(c));
-          toast("Copied to clipboard");
-          return;
-        }
-        if(act==="edit"){
-          var taE = card.querySelector('[data-ai="'+id+'"]');
-          if(editingAiId===id){
-            editingAiId = null;            // done editing
-            toast("Message saved");
-          }else{
-            editingAiId = id;
-          }
-          render();
-          if(editingAiId===id){
-            var nt = listEl.querySelector('[data-ai="'+id+'"]');
-            if(nt){ nt.focus(); nt.setSelectionRange(nt.value.length, nt.value.length); }
-          }
-          return;
-        }
-        if(act==="refresh"){
-          aiCounter[id] = (aiCounter[id]||0)+1;
-          editingAiId = null;
-          render();
-          return;
-        }
-        if(act==="savelog"){
-          var area = card.querySelector('[data-log="'+id+'"]');
-          var note = area ? area.value.trim() : "";
-          if(!note){ toast("Write something first"); return; }
-          c.history = c.history || [];
-          c.history.push({ date: isoDaysAgo(0), note: note });
-          c.lastContact = isoDaysAgo(0);
-          save();
-          render();
-          toast("Logged · marked on track");
-          return;
-        }
-      });
-    });
+    if(act==="toggle"){
+      openId = (openId===id)? null : id;
+      editingAiId = null;
+      render();
+      return;
+    }
+    if(act==="copy"){
+      var ta = card.querySelector('[data-ai="'+id+'"]');
+      copyText(ta ? ta.value : aiSuggestion(c));
+      toast("Copied to clipboard");
+      return;
+    }
+    if(act==="edit"){
+      if(editingAiId===id){
+        editingAiId = null;            // done editing
+        toast("Message saved");
+      }else{
+        editingAiId = id;
+      }
+      render();
+      if(editingAiId===id){
+        var nt = listEl.querySelector('[data-ai="'+id+'"]');
+        if(nt){ nt.focus(); nt.setSelectionRange(nt.value.length, nt.value.length); }
+      }
+      return;
+    }
+    if(act==="refresh"){
+      aiCounter[id] = (aiCounter[id]||0)+1;
+      editingAiId = null;
+      render();
+      return;
+    }
+    if(act==="savelog"){
+      var area = card.querySelector('[data-log="'+id+'"]');
+      var note = area ? area.value.trim() : "";
+      if(!note){ toast("Write something first"); return; }
+      c.history = c.history || [];
+      c.history.push({ date: isoDaysAgo(0), note: note });
+      c.lastContact = isoDaysAgo(0);
+      save();
+      render();
+      toast("Logged · marked on track");
+      return;
+    }
   }
 
   function copyText(t){
@@ -695,16 +716,11 @@
 
   // ---------- Bottom nav ----------
   document.getElementById("nav").addEventListener("click", function(e){
-    var btn = e.target.closest(".nav-btn");
+    var btn = closestSel(e.target, ".nav-btn");
     if(!btn) return;
     filter = btn.getAttribute("data-filter");
     document.querySelectorAll(".nav-btn").forEach(function(b){ b.classList.toggle("active", b===btn); });
     render();
-  });
-
-  // ---------- Galaxy shortcut (one-way link out) ----------
-  document.getElementById("galaxyBtn").addEventListener("click", function(){
-    window.location.href = GALAXY_URL;
   });
 
   // ---------- Add contact sheet ----------
@@ -748,6 +764,7 @@
   });
 
   // ---------- Init ----------
+  listEl.addEventListener("click", onListClick);   // single persistent delegated handler
   render();
 })();
 </script>
