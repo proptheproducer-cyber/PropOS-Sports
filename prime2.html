@@ -281,7 +281,7 @@ function normalizeTask(t){
   t=t||{};
   const num=(v,d)=>{const n=Number(v);return Number.isFinite(n)&&n>=0?n:d;};
   const name=(t.name!=null?t.name:(t.title!=null?t.title:'Untitled'));
-  return {
+  const out={
     id:t.id||uid(),
     name:String(name),
     pomos:Math.max(1,num(t.pomos,1)),
@@ -289,6 +289,12 @@ function normalizeTask(t){
     done:num(t.done,0),
     complete:!!t.complete
   };
+  // Preserve the approval-flow fields Cartella/Hermes set, so a logged task
+  // still shows in the "needs approval" card and keeps its attribution/date.
+  if(t.pending)out.pending=true;
+  if(t.added!=null)out.added=t.added;
+  if(t.source!=null)out.source=t.source;
+  return out;
 }
 // Build S from the JSON. The board renders projects[].tasks[], but the file
 // also carries a flat top-level tasks[] mirror — so a task added directly to

@@ -38,8 +38,11 @@ HOST       = os.environ.get("HOST", "127.0.0.1")
 PORT       = int(os.environ.get("PORT", "8787"))
 LOCK_PATH  = PRIME_JSON + ".lock"
 
-# importance -> default number of pomodoro slots (only used when pomos omitted)
+# importance -> pomodoro slots (only used when pomos omitted). Default is 2,
+# matching the prop-daily-briefing skill ("pomos default 2").
 IMPORTANCE_POMOS = {"low": 1, "medium": 2, "med": 2, "normal": 2, "high": 3, "urgent": 4}
+DEFAULT_POMOS = 2   # skill default
+DEFAULT_LEN = 30    # skill default
 VALID_LENS = {15, 25, 30, 45, 60}
 
 
@@ -126,20 +129,23 @@ def make_task(item):
         return None
     pomos = item.get("pomos")
     if pomos is None:
-        pomos = IMPORTANCE_POMOS.get(str(item.get("importance", "")).lower(), 1)
-    ln = num(item.get("len"), 25)
+        pomos = IMPORTANCE_POMOS.get(str(item.get("importance", "")).lower(), DEFAULT_POMOS)
+    ln = num(item.get("len"), DEFAULT_LEN)
     if ln not in VALID_LENS:
-        ln = 25
+        ln = DEFAULT_LEN
     pending = item.get("pending", True)
+    # Field set matches the prop-daily-briefing skill's prime2.json task format:
+    # id, name, pomos, len, done, complete, pending, source (cartella), added (date).
     return {
         "id": uid(),
         "name": name,
-        "pomos": max(1, num(pomos, 1)),
+        "pomos": max(1, num(pomos, DEFAULT_POMOS)),
         "len": ln,
         "done": 0,
         "complete": False,
         "pending": bool(pending),
-        "added": item.get("added") or "Cartella",
+        "source": item.get("source") or "cartella",
+        "added": item.get("added") or time.strftime("%Y-%m-%d"),
     }
 
 
