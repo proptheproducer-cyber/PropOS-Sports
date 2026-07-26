@@ -274,13 +274,47 @@ let S=null;
 const DATA_URL='/prime/prime2.json';
 
 function emptyState(){return {projects:[],log:{}};}
-// Only trust projects[] (each project carries its own nested tasks[], which is
-// what the board renders) and log{}. Anything missing -> safe empty defaults.
-function normalizeState(data){
+// Coerce any task-like object into the exact shape the board renders, filling
+// safe defaults so a format mismatch (missing pomos/len, "title" vs "name")
+// can never hide a task from the UI.
+function normalizeTask(t){
+  t=t||{};
+  const num=(v,d)=>{const n=Number(v);return Number.isFinite(n)&&n>=0?n:d;};
+  const name=(t.name!=null?t.name:(t.title!=null?t.title:'Untitled'));
   return {
-    projects:(data&&Array.isArray(data.projects))?data.projects:[],
-    log:(data&&data.log&&typeof data.log==='object')?data.log:{}
+    id:t.id||uid(),
+    name:String(name),
+    pomos:Math.max(1,num(t.pomos,1)),
+    len:Math.max(1,num(t.len,25)),
+    done:num(t.done,0),
+    complete:!!t.complete
   };
+}
+// Build S from the JSON. The board renders projects[].tasks[], but the file
+// also carries a flat top-level tasks[] mirror — so a task added directly to
+// that tasks[] array (with a projId) must be merged into its project, or it
+// would never appear. Nested wins; flat entries are merged in and de-duped.
+function normalizeState(data){
+  data=data||{};
+  const projects=(Array.isArray(data.projects)?data.projects:[]).map(p=>Object.assign({},p,{
+    tasks:(Array.isArray(p.tasks)?p.tasks:[]).map(normalizeTask)
+  }));
+  const seen={};
+  projects.forEach(p=>p.tasks.forEach(t=>{seen[p.id+'|'+t.id]=true;}));
+  // Fold flat top-level tasks[] into their project's nested tasks[].
+  (Array.isArray(data.tasks)?data.tasks:[]).forEach(raw=>{
+    if(!raw||typeof raw!=='object')return;
+    let proj=null;
+    if(raw.projId)proj=projects.find(p=>p.id===raw.projId);
+    if(!proj&&raw.project)proj=projects.find(p=>p.name===raw.project);
+    if(!proj&&raw.projectName)proj=projects.find(p=>p.name===raw.projectName);
+    if(!proj)return; // can't place it — skip, never crash
+    const t=normalizeTask(raw);
+    if(seen[proj.id+'|'+t.id])return; // already nested — avoid duplicate
+    proj.tasks.push(t);
+    seen[proj.id+'|'+t.id]=true;
+  });
+  return {projects,log:(data.log&&typeof data.log==='object')?data.log:{}};
 }
 // Shape written to the server: the project tree (tasks nested inside each
 // project) plus a flat tasks[] mirror, so the file always has top-level
@@ -298,7 +332,10 @@ async function loadFromServer(manual){
   const btn=document.getElementById('sync-btn');
   try{
     btn.classList.add('spin');
-    const r=await fetch(DATA_URL,{cache:'no-store',headers:{'Accept':'application/json'}});
+    // Cache-buster query param + no-store defeats any proxy/browser caching so
+    // we always read the freshest prime2.json (the location match ignores ?query).
+    const bust=DATA_URL+(DATA_URL.indexOf('?')>-1?'&':'?')+'_='+Date.now();
+    const r=await fetch(bust,{cache:'no-store',headers:{'Accept':'application/json','Cache-Control':'no-cache'}});
     if(r.ok){
       const text=(await r.text()).trim();
       S=text?normalizeState(JSON.parse(text)):emptyState(); // empty file -> empty board
