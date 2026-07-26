@@ -1,0 +1,19 @@
+[Unit]
+Description=Cartella ingest endpoint for PROP PRIME
+After=network.target
+
+[Service]
+# Runs as the same user nginx uses, so it can write prime2.json and keep ownership.
+User=www-data
+Group=www-data
+Environment=PRIME_JSON=/var/www/prop/prime2.json
+Environment=HOST=127.0.0.1
+Environment=PORT=8787
+# CHANGE THIS SECRET, then use the same value in Cartella's X-Cartella-Token header.
+Environment=CARTELLA_TOKEN=CHANGE_ME_TO_A_LONG_RANDOM_STRING
+ExecStart=/usr/bin/python3 /var/www/prop/cartella_ingest.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
