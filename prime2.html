@@ -786,7 +786,8 @@ function showAddTask(projId){
     <div class="m-lbl">Sessions needed</div>
     <div class="stepper"><button class="st-btn" id="st-minus">−</button><div class="st-val" id="st-val">2</div><button class="st-btn" id="st-plus">+</button><div class="st-lbl">pomodoro slots</div></div>
     <div class="m-lbl">Session length</div><div class="chip-row" id="nt-lens"></div>
-    <div class="m-btns"><button class="m-no" id="nt-cancel">Cancel</button><button class="m-ok" id="nt-save">Add Task</button></div>`;
+    <div class="m-btns"><button class="m-no" id="nt-cancel">Cancel</button><button class="m-ok" id="nt-save">Add Task</button></div>
+    <button id="nt-more" style="width:100%;margin-top:9px;padding:13px;border-radius:12px;background:var(--s2);border:1px solid var(--brand);color:var(--brand);font-size:13px;font-weight:800">＋ Save &amp; add another</button>`;
   document.getElementById('st-minus').addEventListener('click',()=>{pomos=Math.max(1,pomos-1);document.getElementById('st-val').textContent=pomos;});
   document.getElementById('st-plus').addEventListener('click',()=>{pomos=Math.min(12,pomos+1);document.getElementById('st-val').textContent=pomos;});
   const lens=document.getElementById('nt-lens');
@@ -797,12 +798,24 @@ function showAddTask(projId){
   });
   document.getElementById('nt-cancel').addEventListener('click',closeModal);
   document.getElementById('nt-x').addEventListener('click',closeModal);
-  document.getElementById('nt-save').addEventListener('click',()=>{
-    const name=document.getElementById('nt-name').value.trim();if(!name)return;
+  // Add one task to this project. keepOpen=true leaves the sheet up so you can
+  // enter several in a row (e.g. 5-10 follow-ups) without reopening the dialog.
+  function addOne(keepOpen){
+    const nameEl=document.getElementById('nt-name');
+    const name=nameEl.value.trim();if(!name)return;
     const p=projById(projId);if(!p)return;
     p.tasks.push({id:uid(),name,pomos,len,done:0,complete:false});
-    save();closeModal();renderPanel();render();toast('Task added');
-  });
+    save();renderPanel();render();
+    if(keepOpen){
+      nameEl.value='';nameEl.focus();
+      toast('Added — '+p.tasks.length+' in '+p.name);
+    }else{
+      closeModal();toast('Task added');
+    }
+  }
+  document.getElementById('nt-save').addEventListener('click',()=>addOne(false));
+  document.getElementById('nt-more').addEventListener('click',()=>addOne(true));
+  document.getElementById('nt-name').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addOne(true);}});
   modal.classList.add('on');
   setTimeout(()=>document.getElementById('nt-name').focus(),120);
 }
