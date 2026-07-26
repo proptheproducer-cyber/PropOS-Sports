@@ -271,42 +271,65 @@ const SEED={projects:[
 ],log:{}};
 
 let S=null;
-const SYNC_URL='/prime2api/state';
-const SYNC_TOKEN='prop2026';
-let synced=false;
+const DATA_URL='/prime/prime2.json';
 
-function load(){
-  try{const raw=localStorage.getItem('prop_prime_v2');S=raw?JSON.parse(raw):JSON.parse(JSON.stringify(SEED));}
-  catch(e){S=JSON.parse(JSON.stringify(SEED));}
-  if(!S.log)S.log={};
+function emptyState(){return {projects:[],log:{}};}
+// Only trust projects[] (each project carries its own nested tasks[], which is
+// what the board renders) and log{}. Anything missing -> safe empty defaults.
+function normalizeState(data){
+  return {
+    projects:(data&&Array.isArray(data.projects))?data.projects:[],
+    log:(data&&data.log&&typeof data.log==='object')?data.log:{}
+  };
 }
-async function pullServer(){
+// Shape written to the server: the project tree (tasks nested inside each
+// project) plus a flat tasks[] mirror, so the file always has top-level
+// tasks + projects arrays. log{} keeps the pomodoro session counts.
+function serializeState(s){
+  const tasks=[];
+  (s.projects||[]).forEach(p=>(p.tasks||[]).forEach(t=>{
+    tasks.push(Object.assign({projId:p.id,planet:p.planet},t));
+  }));
+  return {projects:s.projects||[],tasks:tasks,log:s.log||{}};
+}
+
+// ── LOAD: pull the board from /prime/prime2.json on startup ──
+async function loadFromServer(manual){
   const btn=document.getElementById('sync-btn');
   try{
     btn.classList.add('spin');
-    const r=await fetch(SYNC_URL,{headers:{'X-PP2':SYNC_TOKEN}});
+    const r=await fetch(DATA_URL,{cache:'no-store',headers:{'Accept':'application/json'}});
     if(r.ok){
-      const data=await r.json();
-      if(data&&Array.isArray(data.projects)){S=data;if(!S.log)S.log={};synced=true;
-        try{localStorage.setItem('prop_prime_v2',JSON.stringify(S));}catch(e){}
-        render();toast('↻ Synced');}
+      const text=(await r.text()).trim();
+      S=text?normalizeState(JSON.parse(text)):emptyState(); // empty file -> empty board
+    }else{
+      S=emptyState(); // 404 / server error -> empty board
     }
-  }catch(e){/* offline or standalone — local mode is fine */}
-  finally{btn.classList.remove('spin');}
+  }catch(e){
+    S=emptyState(); // network failure or bad JSON -> empty board, never crash
+  }finally{
+    if(!S)S=emptyState();
+    btn.classList.remove('spin');
+    render();
+    if(manual)toast('↻ Synced');
+  }
 }
-let pushT=null;
-function pushServer(){
-  if(!synced)return; // never push over server data we haven't pulled
-  clearTimeout(pushT);
-  pushT=setTimeout(async()=>{
-    try{await fetch(SYNC_URL,{method:'POST',headers:{'Content-Type':'application/json','X-PP2':SYNC_TOKEN},body:JSON.stringify(S)});}
-    catch(e){}
-  },1200);
+
+// ── SAVE: write the full state back to /prime/prime2.json (debounced) ──
+let saveT=null;
+function saveToServer(){
+  clearTimeout(saveT);
+  saveT=setTimeout(async()=>{
+    try{
+      await fetch(DATA_URL,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(serializeState(S))
+      });
+    }catch(e){/* write blocked or offline — board keeps working in memory */}
+  },600);
 }
-function save(){
-  try{localStorage.setItem('prop_prime_v2',JSON.stringify(S));}catch(e){}
-  pushServer();
-}
+function save(){saveToServer();}
 function uid(){return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function todayKey(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
 
@@ -377,7 +400,7 @@ function renderPendingInto(wrap){
   wrap.appendChild(card);
 }
 document.getElementById('pend-badge').addEventListener('click',()=>setView('board'));
-document.getElementById('sync-btn').addEventListener('click',pullServer);
+document.getElementById('sync-btn').addEventListener('click',()=>loadFromServer(true));
 
 // ═══════════════ NAV (simple + bulletproof) ═══════════════
 let curView='galaxy';
@@ -792,7 +815,7 @@ function render(){
   if(curView==='board')renderBoard();
   if(curView==='focus')renderFocus();
 }
-load();render();pullServer();
+S=emptyState();render();loadFromServer();
 </script>
 </body>
 </html>
