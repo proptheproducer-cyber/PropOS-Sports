@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>PROP PRIME</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#080812;--s1:#0e0e1c;--s2:#14142a;--s3:#1c1c38;
+  --border:#1e1e3a;--border2:#2a2a50;
+  --text:#e8eaff;--dim:#4a4a88;--dim2:#8585c0;
+  --brand:#a78bfa;--brand2:#7c3aed;
+  --green:#00e5a0;--yellow:#ffb800;--red:#ff4d6a;--cyan:#00e5ff;--orange:#ff9f43;--pink:#f368e0;
+  --T:54px;--B:66px;
+}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,system-ui,sans-serif;font-size:14px;overflow:hidden}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+
+/* STARFIELD */
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(1px 1px at 20% 30%,rgba(255,255,255,.5) 50%,transparent 50%),
+  radial-gradient(1px 1px at 70% 15%,rgba(167,139,250,.6) 50%,transparent 50%),
+  radial-gradient(1.5px 1.5px at 85% 60%,rgba(255,255,255,.35) 50%,transparent 50%),
+  radial-gradient(1px 1px at 40% 75%,rgba(0,229,255,.45) 50%,transparent 50%),
+  radial-gradient(1px 1px at 10% 85%,rgba(255,255,255,.3) 50%,transparent 50%),
+  radial-gradient(1.5px 1.5px at 55% 45%,rgba(255,255,255,.25) 50%,transparent 50%),
+  radial-gradient(1px 1px at 92% 88%,rgba(167,139,250,.4) 50%,transparent 50%);
+}
+
+/* TOPBAR */
+#top{position:fixed;top:0;left:0;right:0;height:var(--T);z-index:100;display:flex;align-items:center;padding:0 16px;gap:10px;background:rgba(8,8,18,.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.logo{font-size:14px;font-weight:900;letter-spacing:4px;background:linear-gradient(135deg,var(--brand),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#top .sub{font-size:9px;letter-spacing:2px;color:var(--dim2);text-transform:uppercase;font-weight:700}
+.sp{flex:1}
+.top-stat{font-size:11px;color:var(--dim2);font-weight:700}
+.top-stat b{color:var(--green)}
+.sync-btn{width:34px;height:34px;border-radius:10px;background:var(--s2);border:1px solid var(--border2);color:var(--dim2);font-size:15px;display:flex;align-items:center;justify-content:center}
+.sync-btn.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.pend-badge{padding:6px 11px;border-radius:20px;background:rgba(255,184,0,.14);border:1px solid var(--yellow);color:var(--yellow);font-size:10px;font-weight:900;letter-spacing:.5px}
+.appr-card{background:rgba(255,184,0,.06);border:1px solid rgba(255,184,0,.4);border-radius:14px;padding:12px 13px;margin-bottom:10px}
+.appr-head{font-size:10px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;color:var(--yellow);margin-bottom:8px}
+.appr-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,184,0,.15)}
+.appr-info{flex:1;min-width:0}
+.appr-name{font-size:13px;font-weight:700}
+.appr-sub{font-size:10px;color:var(--dim2);margin-top:2px}
+.appr-ok{padding:8px 14px;border-radius:10px;background:var(--green);color:#04140d;font-size:11px;font-weight:900}
+.appr-no{padding:8px 12px;border-radius:10px;background:var(--s2);border:1px solid var(--border2);color:var(--dim2);font-size:11px;font-weight:800}
+
+/* VIEWS */
+.view{position:fixed;top:var(--T);bottom:var(--B);left:0;right:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;z-index:1;padding:14px}
+.view.on{display:block}
+
+/* ══ GALAXY (orbital map) ══ */
+#v-galaxy{padding:0}
+.gal-wrap{min-height:100%;display:flex;flex-direction:column;align-items:center;padding:12px 14px 30px}
+.orbit-stage{position:relative;width:min(94vw,430px);height:min(94vw,430px);flex-shrink:0}
+.orbit-ring{position:absolute;border:1px dashed rgba(167,139,250,.18);border-radius:50%;pointer-events:none}
+.sun{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:104px;height:104px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:radial-gradient(circle at 35% 35%,#2a1f5e,#12102a 70%);border:2px solid var(--brand);box-shadow:0 0 40px rgba(167,139,250,.35),0 0 90px rgba(124,58,237,.15);z-index:2}
+.sun .s-name{font-size:14px;font-weight:900;letter-spacing:3px}
+.sun .s-pct{font-size:12px;font-weight:800;color:var(--green)}
+.sun .s-lbl{font-size:7px;letter-spacing:1.5px;color:var(--dim2);text-transform:uppercase}
+.orb-planet{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;z-index:3;width:86px;transition:transform .12s}
+.orb-planet:active{transform:translate(-50%,-50%) scale(.93)}
+.op-orb{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;position:relative;background:var(--s1);border:1px solid var(--border)}
+.op-ring{position:absolute;inset:-5px;border-radius:50%}
+.op-name{font-size:10px;font-weight:800;letter-spacing:.3px;text-shadow:0 2px 8px #000}
+.op-pct{font-size:9px;font-weight:800}
+.gal-hint{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin:6px 0 10px}
+.gal-strip{width:100%;max-width:430px;display:flex;flex-direction:column;gap:7px}
+.strip-row{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:10px 12px;width:100%;text-align:left}
+.strip-row:active{opacity:.8}
+.strip-emoji{font-size:16px;flex-shrink:0}
+.strip-name{font-size:12px;font-weight:800;width:86px;flex-shrink:0}
+.strip-bar{flex:1;height:6px;border-radius:3px;background:var(--s3);overflow:hidden}
+.strip-fill{height:100%;border-radius:3px;transition:width .4s}
+.strip-pct{font-size:11px;font-weight:800;width:38px;text-align:right;flex-shrink:0}
+
+/* PANEL (slide-over for planet/project drill-in) */
+#panel{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;background:var(--bg)}
+#panel.on{display:flex}
+.pan-top{height:var(--T);display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--border);background:rgba(8,8,18,.97);flex-shrink:0}
+.back-btn{width:38px;height:38px;border-radius:11px;background:var(--s2);border:1px solid var(--border2);font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pan-title{font-size:15px;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pan-add{height:34px;padding:0 14px;border-radius:10px;background:var(--brand2);color:#fff;font-size:12px;font-weight:800}
+.pan-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
+
+/* project rows inside planet panel */
+.proj-row{display:flex;align-items:center;gap:12px;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:10px;width:100%;text-align:left;transition:transform .1s}
+.proj-row:active{transform:scale(.985)}
+.proj-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.proj-info{flex:1;min-width:0}
+.proj-name{font-size:14px;font-weight:800;margin-bottom:3px}
+.proj-sub{font-size:11px;color:var(--dim2)}
+.proj-pct{font-size:12px;font-weight:800;flex-shrink:0}
+.chev{color:var(--dim);font-size:16px;flex-shrink:0}
+
+/* ══ TASKS (project detail + board) ══ */
+.task-row{display:flex;align-items:center;gap:11px;background:var(--s1);border:1px solid var(--border);border-radius:13px;padding:12px;margin-bottom:9px}
+.task-row.done{opacity:.45}
+.tick{width:26px;height:26px;border-radius:9px;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:transparent}
+.tick.on{background:var(--green);border-color:var(--green);color:#04140d}
+.task-info{flex:1;min-width:0}
+.task-name{font-size:13px;font-weight:700;margin-bottom:4px}
+.task-row.done .task-name{text-decoration:line-through}
+.pomo-dots{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.pdot{width:9px;height:9px;border-radius:50%;background:var(--s3);border:1px solid var(--border2)}
+.pdot.full{background:var(--brand);border-color:var(--brand)}
+.pomo-lbl{font-size:9px;color:var(--dim2);font-weight:700;margin-left:4px}
+.play-btn{width:38px;height:38px;border-radius:11px;background:rgba(167,139,250,.12);border:1px solid var(--brand);color:var(--brand);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.task-del{width:30px;height:30px;border-radius:9px;color:var(--dim);font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* ══ BOARD ══ */
+.board-tools{display:flex;gap:8px;margin-bottom:14px}
+.b-search{flex:1;background:var(--s1);border:1px solid var(--border);border-radius:11px;color:var(--text);font-size:13px;padding:10px 13px;outline:none}
+.b-search:focus{border-color:var(--brand)}
+.b-toggle{padding:0 14px;border-radius:11px;background:var(--s2);border:1px solid var(--border2);color:var(--dim2);font-size:11px;font-weight:800}
+.b-group{margin-bottom:16px}
+.b-ghead{display:flex;align-items:center;gap:8px;padding:4px 2px 10px}
+.b-gdot{width:10px;height:10px;border-radius:50%}
+.b-gname{font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.b-gcount{font-size:10px;color:var(--dim2);font-weight:700}
+.b-proj{background:var(--s1);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.b-phead{display:flex;align-items:center;gap:10px;padding:12px 13px;width:100%;text-align:left}
+.b-pname{font-size:13px;font-weight:800;flex:1}
+.b-pmeta{font-size:10px;color:var(--dim2);font-weight:700}
+.b-pchev{color:var(--dim);font-size:14px;transition:transform .2s}
+.b-pchev.open{transform:rotate(90deg)}
+.b-pbody{display:none;padding:0 11px 11px}
+.b-pbody.open{display:block}
+.add-inline{display:flex;gap:7px;margin-top:2px}
+.add-inp{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:12px;padding:9px 11px;outline:none}
+.add-go{padding:0 13px;border-radius:10px;background:var(--brand2);color:#fff;font-size:12px;font-weight:800}
+
+/* ══ FOCUS ══ */
+#v-focus{display:none;align-items:center;justify-content:flex-start;flex-direction:column;text-align:center}
+#v-focus.on{display:flex}
+.f-idle{padding:40px 24px;color:var(--dim2);font-size:13px;line-height:2}
+.f-idle b{color:var(--text)}
+.f-task-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--dim2);font-weight:800;margin:18px 0 6px}
+.f-task-name{font-size:17px;font-weight:900;margin-bottom:4px;padding:0 20px}
+.f-proj-name{font-size:11px;color:var(--dim2);font-weight:700;margin-bottom:18px}
+.ring-wrap{position:relative;width:230px;height:230px;margin-bottom:16px}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-time{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.rt-big{font-size:44px;font-weight:900;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.rt-sub{font-size:10px;letter-spacing:2px;color:var(--dim2);text-transform:uppercase;font-weight:800}
+.f-dots{display:flex;gap:7px;margin-bottom:20px}
+.f-dots .pdot{width:12px;height:12px}
+.f-ctrl{display:flex;gap:12px;margin-bottom:14px}
+.fc-btn{height:52px;padding:0 26px;border-radius:16px;font-size:14px;font-weight:900;letter-spacing:1px}
+.fc-main{background:var(--brand2);color:#fff;box-shadow:0 6px 24px rgba(124,58,237,.35)}
+.fc-sec{background:var(--s2);border:1px solid var(--border2);color:var(--dim2)}
+.f-exit{font-size:11px;color:var(--dim);font-weight:700;text-decoration:underline;padding:8px}
+
+/* ══ BOTTOM NAV ══ */
+#nav{position:fixed;bottom:0;left:0;right:0;height:var(--B);z-index:100;display:flex;align-items:stretch;background:rgba(8,8,18,.97);backdrop-filter:blur(16px);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+.nv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--dim);font-size:9px;font-weight:800;letter-spacing:1px}
+.nv .ni{font-size:21px;line-height:1}
+.nv.on{color:var(--brand)}
+
+/* ══ MODAL ══ */
+#modal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.72);display:none;align-items:flex-end;justify-content:center}
+#modal.on{display:flex}
+.sheet{width:100%;max-width:520px;background:var(--s1);border:1px solid var(--border2);border-radius:22px 22px 0 0;padding:18px 18px calc(30px + env(safe-area-inset-bottom));max-height:86vh;overflow-y:auto}
+.m-handle{width:36px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 16px}
+.m-title{font-size:16px;font-weight:900;margin-bottom:16px}
+.m-x{position:absolute;top:14px;right:16px;width:36px;height:36px;border-radius:11px;background:var(--s2);border:1px solid var(--border2);color:var(--dim2);font-size:18px;display:flex;align-items:center;justify-content:center}
+.sheet{position:relative}
+.m-lbl{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--dim2);margin-bottom:6px}
+.m-inp{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;color:var(--text);font-size:14px;padding:11px 13px;outline:none;margin-bottom:14px}
+.m-inp:focus{border-color:var(--brand)}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.chip{padding:8px 13px;border-radius:12px;border:1px solid var(--border2);background:var(--s2);color:var(--dim2);font-size:12px;font-weight:700}
+.chip.on{background:var(--brand2);border-color:var(--brand);color:#fff}
+.stepper{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.st-btn{width:42px;height:42px;border-radius:12px;background:var(--s2);border:1px solid var(--border2);font-size:19px;font-weight:800;color:var(--brand)}
+.st-val{font-size:19px;font-weight:900;min-width:36px;text-align:center}
+.st-lbl{font-size:11px;color:var(--dim2);font-weight:700}
+.m-btns{display:flex;gap:9px;margin-top:6px}
+.m-ok{flex:1;padding:14px;border-radius:12px;background:var(--brand2);color:#fff;font-size:14px;font-weight:900}
+.m-no{flex:1;padding:14px;border-radius:12px;background:var(--s2);border:1px solid var(--border);color:var(--text);font-size:14px;font-weight:700}
+
+/* TOAST */
+#toast{position:fixed;bottom:calc(var(--B) + 14px);left:50%;transform:translateX(-50%) translateY(8px);z-index:400;background:var(--s3);border:1px solid var(--border2);border-radius:11px;padding:10px 17px;font-size:12px;font-weight:700;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%)}
+
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="stars"></div>
+
+<div id="top">
+  <div>
+    <div class="logo">PROP PRIME</div>
+  </div>
+  <div class="sp"></div>
+  <button class="pend-badge" id="pend-badge" style="display:none">0 pending</button>
+  <div class="top-stat">Today: <b id="today-pomos">0</b> sessions</div>
+  <button class="sync-btn" id="sync-btn" title="Sync">↻</button>
+</div>
+
+<!-- GALAXY -->
+<div class="view on" id="v-galaxy">
+  <div class="gal-wrap">
+    <div class="orbit-stage" id="orbit-stage"></div>
+    <div class="gal-hint">Tap a world · bars show live progress</div>
+    <div class="gal-strip" id="gal-strip"></div>
+  </div>
+</div>
+
+<!-- BOARD -->
+<div class="view" id="v-board">
+  <div class="board-tools">
+    <input class="b-search" id="b-search" placeholder="Search tasks…">
+    <button class="b-toggle" id="b-toggle">− ALL</button>
+  </div>
+  <div id="board-groups"></div>
+</div>
+
+<!-- FOCUS -->
+<div class="view" id="v-focus"></div>
+
+<!-- SLIDE PANEL -->
+<div id="panel">
+  <div class="pan-top">
+    <button class="back-btn" id="pan-back">‹</button>
+    <div class="pan-title" id="pan-title"></div>
+    <button class="pan-add" id="pan-add">+ Add</button>
+  </div>
+  <div class="pan-body" id="pan-body"></div>
+</div>
+
+<nav id="nav">
+  <button class="nv on" data-v="galaxy"><span class="ni">🌌</span>GALAXY</button>
+  <button class="nv" data-v="board"><span class="ni">📋</span>BOARD</button>
+  <button class="nv" data-v="focus"><span class="ni">⏱</span>FOCUS</button>
+</nav>
+
+<div id="modal"><div class="sheet" id="sheet"></div></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+// ═══════════════ DATA ═══════════════
+const PLANETS=[
+  {id:'music',name:'Music',emoji:'🎵',color:'#a78bfa'},
+  {id:'education',name:'Education',emoji:'🎓',color:'#00e5a0'},
+  {id:'business',name:'Business',emoji:'💼',color:'#ffb800'},
+  {id:'aitech',name:'AI + Tech',emoji:'🤖',color:'#00e5ff'},
+  {id:'nonprofit',name:'Nonprofit',emoji:'🏛',color:'#ff9f43'},
+  {id:'personal',name:'Personal',emoji:'🌱',color:'#f368e0'},
+];
+const POMO_LENGTHS=[15,25,30,45,60];
+
+const SEED={projects:[
+  {id:'p1',planet:'music',name:'Aaron Le Album',tasks:[
+    {id:'t1',name:'Brainstorm album concepts',pomos:2,len:30,done:0,complete:false},
+    {id:'t2',name:'Build demo beats',pomos:4,len:30,done:0,complete:false}]},
+  {id:'p2',planet:'music',name:'Jack / Shattered Records',tasks:[
+    {id:'t3',name:'Follow up with Jack',pomos:1,len:15,done:0,complete:false}]},
+  {id:'p3',planet:'aitech',name:'ONUS PromptLab',tasks:[
+    {id:'t4',name:'Full ONUS system overview',pomos:3,len:30,done:0,complete:false}]},
+  {id:'p4',planet:'education',name:'AI Workshops',tasks:[
+    {id:'t5',name:'Move workshop files to Drive',pomos:1,len:25,done:0,complete:false}]},
+  {id:'p5',planet:'business',name:'Book',tasks:[
+    {id:'t6',name:'Consolidate draft into one doc',pomos:2,len:45,done:0,complete:false}]},
+  {id:'p6',planet:'nonprofit',name:'CMC (501c3)',tasks:[]},
+],log:{}};
+
+let S=null;
+const DATA_URL='/prime/prime2.json';
+
+function emptyState(){return {projects:[],log:{}};}
+// Coerce any task-like object into the exact shape the board renders, filling
+// safe defaults so a format mismatch (missing pomos/len, "title" vs "name")
+// can never hide a task from the UI.
+function normalizeTask(t){
+  t=t||{};
+  const num=(v,d)=>{const n=Number(v);return Number.isFinite(n)&&n>=0?n:d;};
+  const name=(t.name!=null?t.name:(t.title!=null?t.title:'Untitled'));
+  const out={
+    id:t.id||uid(),
+    name:String(name),
+    pomos:Math.max(1,num(t.pomos,1)),
+    len:Math.max(1,num(t.len,25)),
+    done:num(t.done,0),
+    complete:!!t.complete
+  };
+  // Preserve the approval-flow fields Cartella/Hermes set, so a logged task
+  // still shows in the "needs approval" card and keeps its attribution/date.
+  if(t.pending)out.pending=true;
+  if(t.added!=null)out.added=t.added;
+  if(t.source!=null)out.source=t.source;
+  return out;
+}
+// Build S from the JSON. The board renders projects[].tasks[], but the file
+// also carries a flat top-level tasks[] mirror — so a task added directly to
+// that tasks[] array (with a projId) must be merged into its project, or it
+// would never appear. Nested wins; flat entries are merged in and de-duped.
+function normalizeState(data){
+  data=data||{};
+  const projects=(Array.isArray(data.projects)?data.projects:[]).map(p=>Object.assign({},p,{
+    tasks:(Array.isArray(p.tasks)?p.tasks:[]).map(normalizeTask)
+  }));
+  const seen={};
+  projects.forEach(p=>p.tasks.forEach(t=>{seen[p.id+'|'+t.id]=true;}));
+  // Fold flat top-level tasks[] into their project's nested tasks[].
+  (Array.isArray(data.tasks)?data.tasks:[]).forEach(raw=>{
+    if(!raw||typeof raw!=='object')return;
+    let proj=null;
+    if(raw.projId)proj=projects.find(p=>p.id===raw.projId);
+    if(!proj&&raw.project)proj=projects.find(p=>p.name===raw.project);
+    if(!proj&&raw.projectName)proj=projects.find(p=>p.name===raw.projectName);
+    if(!proj)return; // can't place it — skip, never crash
+    const t=normalizeTask(raw);
+    if(seen[proj.id+'|'+t.id])return; // already nested — avoid duplicate
+    proj.tasks.push(t);
+    seen[proj.id+'|'+t.id]=true;
+  });
+  return {projects,log:(data.log&&typeof data.log==='object')?data.log:{}};
+}
+// Shape written to the server: the project tree (tasks nested inside each
+// project) plus a flat tasks[] mirror, so the file always has top-level
+// tasks + projects arrays. log{} keeps the pomodoro session counts.
+function serializeState(s){
+  const tasks=[];
+  (s.projects||[]).forEach(p=>(p.tasks||[]).forEach(t=>{
+    tasks.push(Object.assign({projId:p.id,planet:p.planet},t));
+  }));
+  return {projects:s.projects||[],tasks:tasks,log:s.log||{}};
+}
+
+// ── LOAD: pull the board from /prime/prime2.json on startup ──
+async function loadFromServer(manual){
+  const btn=document.getElementById('sync-btn');
+  try{
+    btn.classList.add('spin');
+    // Cache-buster query param + no-store defeats any proxy/browser caching so
+    // we always read the freshest prime2.json (the location match ignores ?query).
+    const bust=DATA_URL+(DATA_URL.indexOf('?')>-1?'&':'?')+'_='+Date.now();
+    const r=await fetch(bust,{cache:'no-store',headers:{'Accept':'application/json','Cache-Control':'no-cache'}});
+    if(r.ok){
+      const text=(await r.text()).trim();
+      S=text?normalizeState(JSON.parse(text)):emptyState(); // empty file -> empty board
+    }else{
+      S=emptyState(); // 404 / server error -> empty board
+    }
+  }catch(e){
+    S=emptyState(); // network failure or bad JSON -> empty board, never crash
+  }finally{
+    if(!S)S=emptyState();
+    btn.classList.remove('spin');
+    render();
+    if(manual)toast('↻ Synced');
+  }
+}
+
+// ── SAVE: write the full state back to /prime/prime2.json (debounced) ──
+let saveT=null;
+function saveToServer(){
+  clearTimeout(saveT);
+  saveT=setTimeout(async()=>{
+    try{
+      await fetch(DATA_URL,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(serializeState(S))
+      });
+    }catch(e){/* write blocked or offline — board keeps working in memory */}
+  },600);
+}
+function save(){saveToServer();}
+function uid(){return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function todayKey(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+
+// ═══════════════ HELPERS ═══════════════
+function planetOf(id){return PLANETS.find(p=>p.id===id);}
+function projById(id){return S.projects.find(p=>p.id===id);}
+function taskById(pid,tid){const p=projById(pid);return p?p.tasks.find(t=>t.id===tid):null;}
+function projPct(p){
+  const real=p.tasks.filter(t=>!t.pending);
+  if(!real.length)return 0;
+  let earned=0,total=0;
+  real.forEach(t=>{total+=t.pomos;earned+=t.complete?t.pomos:Math.min(t.done,t.pomos);});
+  return total?Math.round(earned/total*100):0;
+}
+function planetPct(pl){
+  const projs=S.projects.filter(p=>p.planet===pl.id);
+  if(!projs.length)return 0;
+  return Math.round(projs.reduce((a,p)=>a+projPct(p),0)/projs.length);
+}
+function sunPct(){
+  const withProjects=PLANETS.filter(pl=>S.projects.some(p=>p.planet===pl.id));
+  if(!withProjects.length)return 0;
+  return Math.round(withProjects.reduce((a,pl)=>a+planetPct(pl),0)/withProjects.length);
+}
+let toastT;
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2000);}
+
+// ═══════════════ PENDING APPROVALS ═══════════════
+function pendingItems(){
+  const out=[];
+  S.projects.forEach(p=>{
+    if(p.pending)out.push({kind:'project',proj:p});
+    p.tasks.forEach(t=>{if(t.pending)out.push({kind:'task',proj:p,task:t});});
+  });
+  return out;
+}
+function approveItem(it){
+  if(it.kind==='project')delete it.proj.pending;
+  else delete it.task.pending;
+  save();render();toast('✓ Approved');
+}
+function rejectItem(it){
+  if(it.kind==='project')S.projects=S.projects.filter(p=>p.id!==it.proj.id);
+  else it.proj.tasks=it.proj.tasks.filter(t=>t.id!==it.task.id);
+  save();render();toast('Removed');
+}
+function renderPendingInto(wrap){
+  const items=pendingItems();
+  const badge=document.getElementById('pend-badge');
+  badge.style.display=items.length?'block':'none';
+  badge.textContent=items.length+' pending';
+  if(!items.length)return;
+  const card=document.createElement('div');card.className='appr-card';
+  card.innerHTML=`<div class="appr-head">⚠ Added by Cartella — needs your approval</div>`;
+  items.forEach(it=>{
+    const row=document.createElement('div');row.className='appr-item';
+    const label=it.kind==='project'?('Project: '+esc(it.proj.name)):esc(it.task.name);
+    const added=(it.kind==='task'?it.task.added:it.proj.added)||'';
+    const sub=it.kind==='project'?planetOf(it.proj.planet).name:(esc(it.proj.name)+' · '+it.task.pomos+' × '+it.task.len+'min');
+    row.innerHTML=`<div class="appr-info"><div class="appr-name">${label}</div><div class="appr-sub">${sub}${added?' · '+added:''}</div></div>`;
+    const ok=document.createElement('button');ok.className='appr-ok';ok.textContent='Approve';
+    ok.addEventListener('click',()=>approveItem(it));
+    const no=document.createElement('button');no.className='appr-no';no.textContent='✕';
+    no.addEventListener('click',()=>rejectItem(it));
+    row.appendChild(ok);row.appendChild(no);
+    card.appendChild(row);
+  });
+  wrap.appendChild(card);
+}
+document.getElementById('pend-badge').addEventListener('click',()=>setView('board'));
+document.getElementById('sync-btn').addEventListener('click',()=>loadFromServer(true));
+
+// ═══════════════ NAV (simple + bulletproof) ═══════════════
+let curView='galaxy';
+document.querySelectorAll('#nav .nv').forEach(btn=>{
+  btn.addEventListener('click',()=>{setView(btn.dataset.v);});
+});
+function setView(v){
+  curView=v;
+  closePanel();
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  document.querySelectorAll('#nav .nv').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  render();
+}
+
+// ═══════════════ GALAXY ═══════════════
+function renderGalaxy(){
+  const stage=document.getElementById('orbit-stage');
+  stage.innerHTML='';
+  const size=stage.offsetWidth||Math.min(window.innerWidth*.94,430);
+  const cx=size/2,cy=size/2;
+  // orbit rings
+  const r1=size*0.30,r2=size*0.44;
+  [r1,r2].forEach(r=>{
+    const ring=document.createElement('div');ring.className='orbit-ring';
+    ring.style.cssText=`left:${cx-r}px;top:${cy-r}px;width:${r*2}px;height:${r*2}px`;
+    stage.appendChild(ring);
+  });
+  // sun
+  const sun=document.createElement('button');sun.className='sun';
+  sun.innerHTML=`<div class="s-name">PROP</div><div class="s-pct">${sunPct()}%</div><div class="s-lbl">All Systems</div>`;
+  sun.addEventListener('click',()=>setView('board'));
+  stage.appendChild(sun);
+  // planets on two rings: inner 3, outer 3, offset angles
+  PLANETS.forEach((pl,i)=>{
+    const inner=i<3;
+    const r=inner?r1:r2;
+    const count=3, idx=inner?i:i-3;
+    const angle=(idx/count)*Math.PI*2 - Math.PI/2 + (inner?0:Math.PI/3);
+    const x=cx+Math.cos(angle)*r, y=cy+Math.sin(angle)*r;
+    const pct=planetPct(pl);
+    const projs=S.projects.filter(p=>p.planet===pl.id);
+    const b=document.createElement('button');
+    b.className='orb-planet';
+    b.style.left=x+'px';b.style.top=y+'px';
+    b.innerHTML=`
+      <div class="op-orb" style="background:${pl.color}14;border-color:${pl.color}55">
+        <div class="op-ring" style="background:conic-gradient(${pl.color} ${pct*3.6}deg, var(--s3) 0deg);-webkit-mask:radial-gradient(circle, transparent 60%, #000 61%);mask:radial-gradient(circle, transparent 60%, #000 61%)"></div>
+        ${pl.emoji}
+      </div>
+      <div class="op-name">${pl.name}</div>
+      <div class="op-pct" style="color:${pl.color}">${projs.length?pct+'%':'—'}</div>`;
+    b.addEventListener('click',()=>openPlanet(pl.id));
+    stage.appendChild(b);
+  });
+  // progress strip below — one tap into any world
+  const strip=document.getElementById('gal-strip');
+  strip.innerHTML='';
+  PLANETS.forEach(pl=>{
+    const projs=S.projects.filter(p=>p.planet===pl.id);
+    if(!projs.length)return;
+    const pct=planetPct(pl);
+    const open=projs.reduce((a,p)=>a+p.tasks.filter(t=>!t.complete).length,0);
+    const row=document.createElement('button');row.className='strip-row';
+    row.innerHTML=`<span class="strip-emoji">${pl.emoji}</span>
+      <span class="strip-name">${pl.name}</span>
+      <span class="strip-bar"><span class="strip-fill" style="width:${pct}%;background:${pl.color}"></span></span>
+      <span class="strip-pct" style="color:${pl.color}">${pct}%</span>`;
+    row.addEventListener('click',()=>openPlanet(pl.id));
+    strip.appendChild(row);
+  });
+}
+
+// ═══════════════ PANEL (planet → project drill-in) ═══════════════
+let panelState=null; // {type:'planet',id} | {type:'project',id}
+function openPlanet(id){panelState={type:'planet',id};renderPanel();document.getElementById('panel').classList.add('on');}
+function openProject(id){panelState={type:'project',id};renderPanel();document.getElementById('panel').classList.add('on');}
+function closePanel(){panelState=null;document.getElementById('panel').classList.remove('on');}
+
+document.getElementById('pan-back').addEventListener('click',()=>{
+  if(panelState&&panelState.type==='project'){
+    const proj=projById(panelState.id);
+    if(proj){openPlanet(proj.planet);return;}
+  }
+  closePanel();render();
+});
+document.getElementById('pan-add').addEventListener('click',()=>{
+  if(!panelState)return;
+  if(panelState.type==='planet')showAddProject(panelState.id);
+  else showAddTask(panelState.id);
+});
+
+function renderPanel(){
+  if(!panelState)return;
+  const body=document.getElementById('pan-body');
+  const title=document.getElementById('pan-title');
+  body.innerHTML='';
+  if(panelState.type==='planet'){
+    const pl=planetOf(panelState.id);
+    title.textContent=pl.emoji+' '+pl.name;
+    document.getElementById('pan-add').textContent='+ Project';
+    const projs=S.projects.filter(p=>p.planet===pl.id);
+    if(!projs.length){body.innerHTML='<div class="f-idle">No projects here yet.<br><b>Tap + Project to start one.</b></div>';return;}
+    projs.forEach(p=>{
+      const pct=projPct(p);
+      const card=document.createElement('div');card.className='b-proj';card.style.marginBottom='12px';
+      const head=document.createElement('button');head.className='b-phead';
+      head.innerHTML=`<div class="proj-dot" style="background:${pl.color}"></div>
+        <div class="b-pname">${esc(p.name)}</div>
+        <div class="b-pmeta" style="color:${pl.color}">${pct}%</div>`;
+      head.addEventListener('click',()=>openProject(p.id));
+      card.appendChild(head);
+      const bar=document.createElement('div');
+      bar.style.cssText='height:5px;background:var(--s3);margin:0 13px 10px;border-radius:3px;overflow:hidden';
+      bar.innerHTML=`<div style="height:100%;width:${pct}%;background:${pl.color};border-radius:3px;transition:width .4s"></div>`;
+      card.appendChild(bar);
+      const bodyEl=document.createElement('div');bodyEl.style.padding='0 11px 11px';
+      p.tasks.filter(t=>!t.complete).slice(0,6).forEach(t=>bodyEl.appendChild(buildTaskRow(p,t)));
+      if(!p.tasks.length){const e=document.createElement('div');e.style.cssText='font-size:11px;color:var(--dim2);padding:0 3px 8px';e.textContent='No tasks yet — tap the project name to add some.';bodyEl.appendChild(e);}
+      card.appendChild(bodyEl);
+      body.appendChild(card);
+    });
+  } else {
+    const p=projById(panelState.id);
+    if(!p){closePanel();return;}
+    const pl=planetOf(p.planet);
+    title.textContent=p.name;
+    document.getElementById('pan-add').textContent='+ Task';
+    if(!p.tasks.length){body.innerHTML='<div class="f-idle">No tasks yet.<br><b>Tap + Task and give it pomodoro slots.</b></div>';return;}
+    p.tasks.forEach(t=>body.appendChild(buildTaskRow(p,t)));
+  }
+}
+
+// ═══════════════ TASK ROW (shared) ═══════════════
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function buildTaskRow(p,t){
+  const row=document.createElement('div');
+  row.className='task-row'+(t.complete?' done':'');
+  const dots=Array.from({length:t.pomos},(_,i)=>`<span class="pdot${i<t.done?' full':''}"></span>`).join('');
+  row.innerHTML=`
+    <button class="tick${t.complete?' on':''}">✓</button>
+    <div class="task-info">
+      <div class="task-name">${esc(t.name)}</div>
+      <div class="pomo-dots">${dots}<span class="pomo-lbl">${t.done}/${t.pomos} × ${t.len}min</span></div>
+    </div>
+    ${!t.complete?`<button class="play-btn">▶</button>`:''}
+    <button class="task-del">×</button>`;
+  row.querySelector('.tick').addEventListener('click',()=>{
+    t.complete=!t.complete;
+    if(t.complete&&focus.taskId===t.id)stopFocus(false);
+    save();render();renderPanel();
+    toast(t.complete?'✓ Task complete':'Task reopened');
+  });
+  row.querySelector('.task-info').addEventListener('click',()=>showEditTask(p.id,t.id));
+  const play=row.querySelector('.play-btn');
+  if(play)play.addEventListener('click',()=>startFocus(p.id,t.id));
+  const delBtn=row.querySelector('.task-del');
+  delBtn.addEventListener('click',()=>{
+    if(delBtn.dataset.armed){
+      p.tasks=p.tasks.filter(x=>x.id!==t.id);
+      if(focus.taskId===t.id)stopFocus(false);
+      save();render();renderPanel();toast('Task deleted');
+    } else {
+      delBtn.dataset.armed='1';delBtn.textContent='✕?';delBtn.style.color='var(--red)';
+      setTimeout(()=>{delete delBtn.dataset.armed;delBtn.textContent='×';delBtn.style.color='';},2600);
+    }
+  });
+  return row;
+}
+
+// ═══════════════ BOARD ═══════════════
+let collapsed={};
+let allCollapsed=false;
+document.getElementById('b-toggle').addEventListener('click',()=>{
+  allCollapsed=!allCollapsed;
+  S.projects.forEach(p=>collapsed[p.id]=allCollapsed);
+  document.getElementById('b-toggle').textContent=allCollapsed?'+ ALL':'− ALL';
+  renderBoard();
+});
+document.getElementById('b-search').addEventListener('input',renderBoard);
+
+function renderBoard(){
+  const q=(document.getElementById('b-search').value||'').toLowerCase();
+  const wrap=document.getElementById('board-groups');
+  wrap.innerHTML='';
+  renderPendingInto(wrap);
+  PLANETS.forEach(pl=>{
+    const projs=S.projects.filter(p=>p.planet===pl.id);
+    if(!projs.length)return;
+    const openAll=projs.reduce((a,p)=>a+p.tasks.filter(t=>!t.complete).length,0);
+    const g=document.createElement('div');g.className='b-group';
+    g.innerHTML=`<div class="b-ghead"><div class="b-gdot" style="background:${pl.color}"></div>
+      <div class="b-gname" style="color:${pl.color}">${pl.emoji} ${pl.name}</div>
+      <div class="b-gcount">${openAll} open</div></div>`;
+    projs.forEach(p=>{
+      const matches=q?p.tasks.filter(t=>t.name.toLowerCase().includes(q)):p.tasks;
+      if(q&&!matches.length&&!p.name.toLowerCase().includes(q))return;
+      const isOpen=q?true:!collapsed[p.id];
+      const card=document.createElement('div');card.className='b-proj';
+      const head=document.createElement('button');head.className='b-phead';
+      head.innerHTML=`<div class="proj-dot" style="background:${pl.color}"></div>
+        <div class="b-pname">${esc(p.name)}</div>
+        <div class="b-pmeta">${projPct(p)}%</div>
+        <div class="b-pchev${isOpen?' open':''}">›</div>`;
+      head.addEventListener('click',()=>{collapsed[p.id]=!collapsed[p.id];renderBoard();});
+      card.appendChild(head);
+      const bodyEl=document.createElement('div');bodyEl.className='b-pbody'+(isOpen?' open':'');
+      (q?matches:p.tasks).forEach(t=>bodyEl.appendChild(buildTaskRow(p,t)));
+      const add=document.createElement('div');add.className='add-inline';
+      add.innerHTML=`<input class="add-inp" placeholder="Quick add task…"><button class="add-go">+</button>`;
+      const inp=add.querySelector('.add-inp');
+      add.querySelector('.add-go').addEventListener('click',()=>{
+        const v=inp.value.trim();if(!v)return;
+        p.tasks.push({id:uid(),name:v,pomos:1,len:25,done:0,complete:false});
+        inp.value='';save();renderBoard();toast('Task added');
+      });
+      bodyEl.appendChild(add);
+      card.appendChild(bodyEl);
+      g.appendChild(card);
+    });
+    wrap.appendChild(g);
+  });
+  if(!wrap.children.length)wrap.innerHTML='<div class="f-idle">No projects yet.<br><b>Go to Galaxy and open a world to add one.</b></div>';
+}
+
+// ═══════════════ FOCUS / POMODORO ═══════════════
+let focus={taskId:null,projId:null,running:false,remaining:0,total:0,timer:null};
+
+function startFocus(pid,tid){
+  const t=taskById(pid,tid);if(!t)return;
+  stopTick();
+  focus={taskId:tid,projId:pid,running:false,remaining:t.len*60,total:t.len*60,timer:null};
+  closePanel();
+  setView('focus');
+}
+function stopFocus(goBoard){
+  stopTick();
+  focus={taskId:null,projId:null,running:false,remaining:0,total:0,timer:null};
+  if(goBoard!==false)setView('board'); else renderFocus();
+}
+function stopTick(){if(focus.timer){clearInterval(focus.timer);focus.timer=null;}}
+function toggleRun(){
+  if(!focus.taskId)return;
+  focus.running=!focus.running;
+  if(focus.running){
+    focus.timer=setInterval(()=>{
+      focus.remaining--;
+      if(focus.remaining<=0){completePomo();return;}
+      updateRing();
+    },1000);
+  } else stopTick();
+  renderFocus();
+}
+function completePomo(){
+  stopTick();
+  const t=taskById(focus.projId,focus.taskId);
+  if(t){
+    t.done=Math.min(t.done+1,t.pomos);
+    const k=todayKey();S.log[k]=(S.log[k]||0)+1;
+    save();
+    if(t.done>=t.pomos){
+      t.complete=true;save();
+      stopFocus(true);toast('🎉 All sessions done — task complete (tap ✓ to reopen)');updateTop();return;
+    }
+    focus.remaining=t.len*60;focus.total=t.len*60;focus.running=false;
+    toast('✓ Session logged');
+  }
+  updateTop();renderFocus();
+}
+function fmt(sec){const m=Math.floor(sec/60),s=sec%60;return m+':'+String(s).padStart(2,'0');}
+function updateRing(){
+  const el=document.getElementById('rt-big');if(el)el.textContent=fmt(focus.remaining);
+  const circ=document.getElementById('ring-fg');
+  if(circ){const pct=focus.total?(1-focus.remaining/focus.total):0;circ.style.strokeDashoffset=circ.dataset.len*(1-pct);}
+}
+function renderFocus(){
+  const v=document.getElementById('v-focus');
+  if(!focus.taskId){
+    v.innerHTML=`<div class="f-idle">No active session.<br><br>
+      <b>How it works:</b><br>
+      Go to Board or a Galaxy project →<br>
+      tap ▶ on any task →<br>
+      run its timed sessions here.<br><br>
+      A task finishes when you check it off<br>or complete all its sessions.</div>`;
+    return;
+  }
+  const t=taskById(focus.projId,focus.taskId);
+  const p=projById(focus.projId);
+  if(!t||!p){stopFocus(false);return;}
+  const pl=planetOf(p.planet);
+  const R=100,LEN=2*Math.PI*R;
+  const pct=focus.total?(1-focus.remaining/focus.total):0;
+  const dots=Array.from({length:t.pomos},(_,i)=>`<span class="pdot${i<t.done?' full':''}"></span>`).join('');
+  v.innerHTML=`
+    <div class="f-task-lbl">Focus Session</div>
+    <div class="f-task-name">${esc(t.name)}</div>
+    <div class="f-proj-name" style="color:${pl.color}">${pl.emoji} ${esc(p.name)}</div>
+    <div class="ring-wrap">
+      <svg width="230" height="230" viewBox="0 0 230 230">
+        <circle cx="115" cy="115" r="${R}" fill="none" stroke="var(--s3)" stroke-width="10"/>
+        <circle id="ring-fg" data-len="${LEN}" cx="115" cy="115" r="${R}" fill="none" stroke="${pl.color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${LEN}" stroke-dashoffset="${LEN*(1-pct)}"/>
+      </svg>
+      <div class="ring-time">
+        <div class="rt-big" id="rt-big">${fmt(focus.remaining)}</div>
+        <div class="rt-sub">${t.len} min session</div>
+      </div>
+    </div>
+    <div class="f-dots">${dots}</div>
+    <div class="f-ctrl">
+      <button class="fc-btn fc-main" id="fc-toggle">${focus.running?'PAUSE':'START'}</button>
+      <button class="fc-btn fc-sec" id="fc-done">FINISH EARLY</button>
+    </div>
+    <button class="f-exit" id="fc-exit">exit session</button>`;
+  document.getElementById('fc-toggle').addEventListener('click',toggleRun);
+  document.getElementById('fc-done').addEventListener('click',completePomo);
+  document.getElementById('fc-exit').addEventListener('click',()=>stopFocus(true));
+}
+
+// ═══════════════ MODALS ═══════════════
+const modal=document.getElementById('modal');
+const sheet=document.getElementById('sheet');
+modal.addEventListener('click',e=>{if(e.target===modal)closeModal();});
+function closeModal(){modal.classList.remove('on');}
+
+function showEditTask(projId,taskId){
+  const p=projById(projId);const t=taskById(projId,taskId);if(!p||!t)return;
+  let pomos=t.pomos,len=t.len;
+  sheet.innerHTML=`<div class="m-handle"></div><button class="m-x" id="et-x">×</button><div class="m-title">Edit Task</div>
+    <div class="m-lbl">Task</div><input class="m-inp" id="et-name" value="${esc(t.name)}">
+    <div class="m-lbl">Sessions needed (done: ${t.done})</div>
+    <div class="stepper"><button class="st-btn" id="et-minus">−</button><div class="st-val" id="et-val">${pomos}</div><button class="st-btn" id="et-plus">+</button><div class="st-lbl">pomodoro slots</div></div>
+    <div class="m-lbl">Session length</div><div class="chip-row" id="et-lens"></div>
+    <div class="m-btns"><button class="m-no" id="et-cancel">Cancel</button><button class="m-ok" id="et-save">Save</button></div>`;
+  document.getElementById('et-minus').addEventListener('click',()=>{pomos=Math.max(1,pomos-1);document.getElementById('et-val').textContent=pomos;});
+  document.getElementById('et-plus').addEventListener('click',()=>{pomos=Math.min(12,pomos+1);document.getElementById('et-val').textContent=pomos;});
+  const lens=document.getElementById('et-lens');
+  POMO_LENGTHS.forEach(L=>{
+    const c=document.createElement('button');c.className='chip'+(L===len?' on':'');c.textContent=L+' min';
+    c.addEventListener('click',()=>{len=L;lens.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');});
+    lens.appendChild(c);
+  });
+  document.getElementById('et-x').addEventListener('click',closeModal);
+  document.getElementById('et-cancel').addEventListener('click',closeModal);
+  document.getElementById('et-save').addEventListener('click',()=>{
+    const name=document.getElementById('et-name').value.trim();if(!name)return;
+    t.name=name;t.pomos=pomos;t.len=len;
+    t.done=Math.min(t.done,t.pomos);
+    if(focus.taskId===t.id&&!focus.running){focus.remaining=t.len*60;focus.total=t.len*60;}
+    save();closeModal();render();renderPanel();toast('Task updated');
+  });
+  modal.classList.add('on');
+}
+
+function showAddProject(planetId){
+  let sel=planetId||PLANETS[0].id;
+  sheet.innerHTML=`<div class="m-handle"></div><button class="m-x" id="np-x">×</button><div class="m-title">New Project</div>
+    <div class="m-lbl">Name</div><input class="m-inp" id="np-name" placeholder="Project name…">
+    <div class="m-lbl">World</div><div class="chip-row" id="np-chips"></div>
+    <div class="m-btns"><button class="m-no" id="np-cancel">Cancel</button><button class="m-ok" id="np-save">Create</button></div>`;
+  const chips=document.getElementById('np-chips');
+  PLANETS.forEach(pl=>{
+    const c=document.createElement('button');c.className='chip'+(pl.id===sel?' on':'');
+    c.textContent=pl.emoji+' '+pl.name;
+    c.addEventListener('click',()=>{sel=pl.id;chips.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');});
+    chips.appendChild(c);
+  });
+  document.getElementById('np-cancel').addEventListener('click',closeModal);
+  document.getElementById('np-x').addEventListener('click',closeModal);
+  document.getElementById('np-save').addEventListener('click',()=>{
+    const name=document.getElementById('np-name').value.trim();if(!name)return;
+    const proj={id:uid(),planet:sel,name,tasks:[]};
+    S.projects.push(proj);save();closeModal();render();
+    openProject(proj.id);toast('Project created');
+  });
+  modal.classList.add('on');
+  setTimeout(()=>document.getElementById('np-name').focus(),120);
+}
+
+function showAddTask(projId){
+  let pomos=2,len=30;
+  sheet.innerHTML=`<div class="m-handle"></div><button class="m-x" id="nt-x">×</button><div class="m-title">New Task</div>
+    <div class="m-lbl">What needs doing</div><input class="m-inp" id="nt-name" placeholder="Task…">
+    <div class="m-lbl">Sessions needed</div>
+    <div class="stepper"><button class="st-btn" id="st-minus">−</button><div class="st-val" id="st-val">2</div><button class="st-btn" id="st-plus">+</button><div class="st-lbl">pomodoro slots</div></div>
+    <div class="m-lbl">Session length</div><div class="chip-row" id="nt-lens"></div>
+    <div class="m-btns"><button class="m-no" id="nt-cancel">Cancel</button><button class="m-ok" id="nt-save">Add Task</button></div>
+    <button id="nt-more" style="width:100%;margin-top:9px;padding:13px;border-radius:12px;background:var(--s2);border:1px solid var(--brand);color:var(--brand);font-size:13px;font-weight:800">＋ Save &amp; add another</button>`;
+  document.getElementById('st-minus').addEventListener('click',()=>{pomos=Math.max(1,pomos-1);document.getElementById('st-val').textContent=pomos;});
+  document.getElementById('st-plus').addEventListener('click',()=>{pomos=Math.min(12,pomos+1);document.getElementById('st-val').textContent=pomos;});
+  const lens=document.getElementById('nt-lens');
+  POMO_LENGTHS.forEach(L=>{
+    const c=document.createElement('button');c.className='chip'+(L===len?' on':'');c.textContent=L+' min';
+    c.addEventListener('click',()=>{len=L;lens.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');});
+    lens.appendChild(c);
+  });
+  document.getElementById('nt-cancel').addEventListener('click',closeModal);
+  document.getElementById('nt-x').addEventListener('click',closeModal);
+  // Add one task to this project. keepOpen=true leaves the sheet up so you can
+  // enter several in a row (e.g. 5-10 follow-ups) without reopening the dialog.
+  function addOne(keepOpen){
+    const nameEl=document.getElementById('nt-name');
+    const name=nameEl.value.trim();if(!name)return;
+    const p=projById(projId);if(!p)return;
+    p.tasks.push({id:uid(),name,pomos,len,done:0,complete:false});
+    save();renderPanel();render();
+    if(keepOpen){
+      nameEl.value='';nameEl.focus();
+      toast('Added — '+p.tasks.length+' in '+p.name);
+    }else{
+      closeModal();toast('Task added');
+    }
+  }
+  document.getElementById('nt-save').addEventListener('click',()=>addOne(false));
+  document.getElementById('nt-more').addEventListener('click',()=>addOne(true));
+  document.getElementById('nt-name').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addOne(true);}});
+  modal.classList.add('on');
+  setTimeout(()=>document.getElementById('nt-name').focus(),120);
+}
+
+// ═══════════════ RENDER ═══════════════
+function updateTop(){document.getElementById('today-pomos').textContent=S.log[todayKey()]||0;}
+function render(){
+  updateTop();
+  if(curView==='galaxy')renderGalaxy();
+  if(curView==='board')renderBoard();
+  if(curView==='focus')renderFocus();
+}
+S=emptyState();render();loadFromServer();
+</script>
+</body>
+</html>
